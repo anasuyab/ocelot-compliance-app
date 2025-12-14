@@ -1,64 +1,68 @@
 import React, { useState } from 'react';
 import { FileText } from 'lucide-react';
-import { getThemeFromURL } from './themes/themes';
-import { mockReport } from './data/mockReport';
 
-// View Imports
+// 1. Logic & Data Imports
+import { getThemeFromURL } from './themes/themes';
+import { useBlueprintAnalysis } from './hooks/useBlueprintAnalysis';
+
+// 2. View Component Imports
 import UploadView from './components/views/UploadView';
 import AnalysisView from './components/views/AnalysisView';
 import ComplianceReport from './components/views/ComplianceReport';
 import StepIndicator from './components/common/StepIndicator';
 
 const App = () => {
-  const [currentStep, setCurrentStep] = useState('upload'); 
+  // Local state for the file (before analysis starts)
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [analysisProgress, setAnalysisProgress] = useState(0);
   
+  // 3. Use the Custom Hook
+  // This handles all the API POST logic, loading states, and progress bars
+  const { 
+    status,        // 'idle', 'analyzing', 'complete', 'error'
+    progress,      // 0-100 number
+    result,        // The JSON data from your backend
+    error,         // Error message if something fails
+    startAnalysis, // Function to trigger the API call
+    resetAnalysis  // Function to reset everything
+  } = useBlueprintAnalysis();
+
   const theme = getThemeFromURL();
 
+  // 4. Determine which view to show based on Hook status
+  const getCurrentStep = () => {
+    switch (status) {
+      case 'analyzing': return 'analyzing';
+      case 'complete': return 'report';
+      case 'error': return 'upload'; // Show upload screen on error so they can try again
+      default: return 'upload';
+    }
+  };
+
+  const currentStep = getCurrentStep();
+
+  // Handlers
   const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) setUploadedFile(file);
+    if (e.target.files && e.target.files[0]) {
+      setUploadedFile(e.target.files[0]);
+    }
   };
 
-  const startAnalysis = () => {
-    setCurrentStep('analyzing');
-    // API logic here (or extracted to a custom hook)
-    fetch('https://ocelot-compliance-app-api.vercel.app/api/analyze')
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json(); // or response.text() if your backend returns plain text
-    })
-    .then(data => {
-      console.log('Analysis results:', data); 
-    })
-    .catch(error => {
-      console.error('Error during analysis API call:', error);
-    });
-    
-    // Simulation
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setAnalysisProgress(progress);
-      if (progress >= 100) {
-        clearInterval(interval);
-        setTimeout(() => setCurrentStep('report'), 500);
-      }
-    }, 400);
+  const handleStartAnalysis = () => {
+    if (uploadedFile) {
+      // This calls the function in your Hook (which calls the Service)
+      startAnalysis(uploadedFile);
+    }
   };
 
-  const resetApp = () => {
-    setCurrentStep('upload');
+  const handleReset = () => {
     setUploadedFile(null);
-    setAnalysisProgress(0);
+    resetAnalysis();
   };
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${theme.pageBackground}`}>
-      {/* Global Header */}
+      
+      {/* --- Header --- */}
       <div className={`${theme.headerBackground} border-b ${theme.headerBorder} shadow-sm`}>
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-3">
@@ -72,37 +76,64 @@ const App = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Navigation / Progress Bar */}
+        
+        {/* --- Error Banner --- */}
+        {error && (
+          <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+            <strong className="font-bold">Error: </strong>
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
+
+        {/* --- Progress Steps Visual --- */}
         <div className="mb-8 flex items-center justify-center gap-4">
-          <StepIndicator number={1} label="Upload" active={currentStep === 'upload'} completed={currentStep !== 'upload'} theme={theme} />
+          <StepIndicator 
+            number={1} 
+            label="Upload" 
+            active={currentStep === 'upload'} 
+            completed={currentStep !== 'upload'} 
+            theme={theme} 
+          />
           <div className={`w-16 h-0.5 ${theme.stepDivider}`}></div>
-          <StepIndicator number={2} label="Analysis" active={currentStep === 'analyzing'} completed={currentStep === 'report'} theme={theme} />
+          <StepIndicator 
+            number={2} 
+            label="Analysis" 
+            active={currentStep === 'analyzing'} 
+            completed={currentStep === 'report'} 
+            theme={theme} 
+          />
           <div className={`w-16 h-0.5 ${theme.stepDivider}`}></div>
-          <StepIndicator number={3} label="Report" active={currentStep === 'report'} theme={theme} />
+          <StepIndicator 
+            number={3} 
+            label="Report" 
+            active={currentStep === 'report'} 
+            theme={theme} 
+          />
         </div>
 
-        {/* View Switcher Logic */}
+        {/* --- View Switcher --- */}
+        
         {currentStep === 'upload' && (
           <UploadView 
-            theme={theme} 
-            uploadedFile={uploadedFile} 
-            onUpload={handleFileUpload} 
-            onStartAnalysis={startAnalysis} 
+            theme={theme}
+            uploadedFile={uploadedFile}
+            onUpload={handleFileUpload}
+            onStartAnalysis={handleStartAnalysis}
           />
         )}
 
         {currentStep === 'analyzing' && (
           <AnalysisView 
-            theme={theme} 
-            progress={analysisProgress} 
+            theme={theme}
+            progress={progress}
           />
         )}
 
-        {currentStep === 'report' && (
+        {currentStep === 'report' && result && (
           <ComplianceReport 
-            theme={theme} 
-            report={mockReport} 
-            onReset={resetApp} 
+            theme={theme}
+            report={result} 
+            onReset={handleReset}
           />
         )}
       </div>
