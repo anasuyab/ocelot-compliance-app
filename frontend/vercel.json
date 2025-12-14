@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+      {
+        "source": "/api/(.*)",
+        "destination": "ocelot-compliance-app-api.vercel.app"
+      }
+    ]
+  }

@@ -145,6 +145,22 @@ const App = () => {
 
   const startAnalysis = () => {
     setCurrentStep('analyzing');
+
+    // Make the actual API call
+    fetch('/api/analyze')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text(); // or response.text() if your backend returns plain text
+      })
+      .then(data => {
+        console.log('Analysis results:', data); 
+      })
+      .catch(error => {
+        console.error('Error during analysis API call:', error);
+      });
+
     // Simulate analysis progress
     let progress = 0;
     const interval = setInterval(() => {
