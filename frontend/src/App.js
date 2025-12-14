@@ -147,7 +147,7 @@ const App = () => {
     setCurrentStep('analyzing');
 
     // Make the actual API call
-    fetch('/api/analyze')
+    fetch('https://ocelot-compliance-app-api.vercel.app/api/analyze')
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
