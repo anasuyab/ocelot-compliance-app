@@ -152,7 +152,7 @@ const App = () => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.text(); // or response.text() if your backend returns plain text
+        return response.json(); // or response.text() if your backend returns plain text
       })
       .then(data => {
         console.log('Analysis results:', data); 
