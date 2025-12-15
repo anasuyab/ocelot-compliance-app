@@ -15,7 +15,7 @@ export const complianceApi = {
     formData.append('file', file); 
 
     // 3. Send the POST request
-    const response = await fetch(`${API_BASE_URL}/analyze`, {
+    const response = await fetch(`${API_BASE_URL}/generateReport`, {
       method: 'POST',
       body: formData,
       // CRITICAL NOTE: Do NOT set 'Content-Type': 'multipart/form-data' manually.
