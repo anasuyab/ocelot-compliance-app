@@ -14,6 +14,7 @@ import StepIndicator from './components/common/StepIndicator';
 const App = () => {
   // Local state for the file (before analysis starts)
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [blueprintImage, setBlueprintImage] = useState(null)
   
   // 3. Use the Custom Hook
   // This handles all the API POST logic, loading states, and progress bars
@@ -42,8 +43,15 @@ const App = () => {
 
   // Handlers
   const handleFileUpload = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadedFile(e.target.files[0]);
+    const file = e.target.files[0];
+    if (file) {
+      setUploadedFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setBlueprintImage(event.target.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -117,6 +125,7 @@ const App = () => {
           <UploadView 
             theme={theme}
             uploadedFile={uploadedFile}
+            blueprintImage={blueprintImage}
             onUpload={handleFileUpload}
             onStartAnalysis={handleStartAnalysis}
           />

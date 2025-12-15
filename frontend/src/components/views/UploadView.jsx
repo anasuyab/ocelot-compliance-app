@@ -1,7 +1,7 @@
 import React from 'react';
-import { Upload, Image } from 'lucide-react';
+import { Upload, Image, FileText } from 'lucide-react';
 
-const UploadView = ({ theme, uploadedFile, onUpload, onStartAnalysis }) => {
+const UploadView = ({ theme, uploadedFile, blueprintImage, onUpload, onStartAnalysis }) => {
   return (
     <div className="max-w-2xl mx-auto">
       <div className={`${theme.cardBackground} rounded-xl shadow-lg p-8 border ${theme.cardBorder}`}>
@@ -19,33 +19,38 @@ const UploadView = ({ theme, uploadedFile, onUpload, onStartAnalysis }) => {
               accept=".pdf,.png,.jpg,.jpeg"
               onChange={onUpload}
             />
-            {uploadedFile ? (
-              <div className="flex items-center justify-center gap-3">
-                <Image className="w-8 h-8 text-green-600" />
-                <div className="text-left">
-                  <p className={`font-semibold ${theme.textPrimary}`}>{uploadedFile.name}</p>
+           {uploadedFile ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-center gap-3">
+                  <FileText className="w-8 h-8 text-green-600" />
+                    <div className="text-left">
+                      <p className="font-semibold text-slate-900">{uploadedFile.name}</p>
+                    </div>
+                  </div>
+                  {blueprintImage && (
+                    <img src={blueprintImage} alt="Blueprint preview" className="max-h-48 mx-auto rounded border border-slate-200" />
+                  )}
                 </div>
-              </div>
-            ) : (
-              <>
-                <Upload className={`w-12 h-12 ${theme.uploadIcon} mx-auto mb-3`} />
-                <p className={`${theme.textPrimary} font-medium`}>Click to upload</p>
-              </>
-            )}
-          </div>
-        </label>
+              ) : (
+                <>
+                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                  <p className="text-slate-700 font-medium">Click to upload or drag and drop</p>
+                  <p className="text-sm text-slate-500 mt-1">PDF, PNG, JPG up to 10MB</p>
+                </>
+              )}
+            </div>
+          </label>
 
-        {uploadedFile && (
-          <button 
-            onClick={onStartAnalysis}
-            className={`w-full mt-6 ${theme.primaryButton} ${theme.primaryButtonText} font-semibold py-3 rounded-lg transition-colors`}
-          >
-            Analyze Blueprint
-          </button>
-        )}
+          {uploadedFile && (
+            <button 
+              onClick={onStartAnalysis}
+              className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors"
+            >
+              Analyze Blueprint
+            </button>
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
+    )}
 
 export default UploadView;
