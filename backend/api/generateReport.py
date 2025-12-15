@@ -2,12 +2,14 @@ from http.server import BaseHTTPRequestHandler
 import json
 from datetime import datetime
 
+ALLOWED_ORIGIN = 'https://ocelot-compliance-app-ux.vercel.app'
+
 class handler(BaseHTTPRequestHandler):
 
     # 1. Handle CORS Preflight (Required for POST requests from browser)
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Origin', ALLOWED_ORIGIN)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
