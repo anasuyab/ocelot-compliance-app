@@ -4,6 +4,7 @@ import { FileText } from 'lucide-react';
 // 1. Logic & Data Imports
 import { getThemeFromURL } from './themes/themes';
 import { useBlueprintAnalysis } from './hooks/useBlueprintAnalysis';
+import { useBlueprintValidation } from './hooks/useBlueprintValidation'; // <--- Import new hook
 
 // 2. View Component Imports
 import UploadView from './components/views/UploadView';
@@ -12,29 +13,36 @@ import ComplianceReport from './components/views/ComplianceReport';
 import StepIndicator from './components/common/StepIndicator';
 
 const App = () => {
-  // Local state for the file (before analysis starts)
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [blueprintImage, setBlueprintImage] = useState(null)
+  const [blueprintImage, setBlueprintImage] = useState(null);
   
-  // 3. Use the Custom Hook
-  // This handles all the API POST logic, loading states, and progress bars
+  // 3. Use the Custom Hooks
   const { 
-    status,        // 'idle', 'analyzing', 'complete', 'error'
-    progress,      // 0-100 number
-    result,        // The JSON data from your backend
-    error,         // Error message if something fails
-    startAnalysis, // Function to trigger the API call
-    resetAnalysis  // Function to reset everything
+    status,        
+    progress,      
+    result,        
+    error: analysisError, 
+    startAnalysis, 
+    resetAnalysis  
   } = useBlueprintAnalysis();
+
+  const {
+    validationStatus,
+    validationError,
+    validateBlueprint,
+    resetValidation
+  } = useBlueprintValidation();
 
   const theme = getThemeFromURL();
 
-  // 4. Determine which view to show based on Hook status
+  // Combine errors for the main banner
+  const displayError = validationError || analysisError;
+
   const getCurrentStep = () => {
     switch (status) {
       case 'analyzing': return 'analyzing';
       case 'complete': return 'report';
-      case 'error': return 'upload'; // Show upload screen on error so they can try again
+      case 'error': return 'upload';
       default: return 'upload';
     }
   };
@@ -46,7 +54,9 @@ const App = () => {
     const file = e.target.files[0];
     if (file) {
       setUploadedFile(file);
-      // Create preview URL
+      // Reset validation state when a new file is chosen
+      resetValidation(); 
+      
       const reader = new FileReader();
       reader.onload = (event) => {
         setBlueprintImage(event.target.result);
@@ -55,15 +65,23 @@ const App = () => {
     }
   };
 
-  const handleStartAnalysis = () => {
+  // --- CHAINED LOGIC HERE ---
+  const handleStartAnalysis = async () => {
     if (uploadedFile) {
-      // This calls the function in your Hook (which calls the Service)
-      startAnalysis(uploadedFile);
+      // Step 1: Validate
+      const isValid = await validateBlueprint(uploadedFile);
+      
+      // Step 2: If valid, Analyze
+      if (isValid) {
+        startAnalysis(uploadedFile);
+      }
     }
   };
 
   const handleReset = () => {
     setUploadedFile(null);
+    setBlueprintImage(null);
+    resetValidation();
     resetAnalysis();
   };
 
@@ -86,14 +104,14 @@ const App = () => {
       <div className="max-w-7xl mx-auto px-6 py-8">
         
         {/* --- Error Banner --- */}
-        {error && (
+        {displayError && (
           <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
             <strong className="font-bold">Error: </strong>
-            <span className="block sm:inline">{error}</span>
+            <span className="block sm:inline">{displayError}</span>
           </div>
         )}
 
-        {/* --- Progress Steps Visual --- */}
+        {/* --- Progress Steps --- */}
         <div className="mb-8 flex items-center justify-center gap-4">
           <StepIndicator 
             number={1} 
@@ -120,7 +138,6 @@ const App = () => {
         </div>
 
         {/* --- View Switcher --- */}
-        
         {currentStep === 'upload' && (
           <UploadView 
             theme={theme}
@@ -128,6 +145,7 @@ const App = () => {
             blueprintImage={blueprintImage}
             onUpload={handleFileUpload}
             onStartAnalysis={handleStartAnalysis}
+            isValidating={validationStatus === 'validating'} // Pass loading state
           />
         )}
 
