@@ -11,6 +11,9 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MODEL_TYPE = "gemini-2.5-flash-lite"
+USER_PROMPT = "Given this picture, check if it is a blueprint. If it is a blueprint then return true,"\
+ "if it is not a blueprint return false. The result must be in json format {\"result\": True}. No othergi " \
+ "information should be provided other than the json" 
 client = OpenAI(
     api_key=GEMINI_API_KEY,
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
