@@ -12,9 +12,9 @@ export const useBlueprintValidation = () => {
 
     try {
       // 2. Make the API Call (Mocked here for demonstration)
-      const isValid = await complianceApi.validateBlueprint(file);
+      const { result } = await complianceApi.validateBlueprint(file);
 
-      if (isValid) {
+      if (result) {
         setValidationStatus('valid');
         return true;
       } else {
