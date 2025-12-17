@@ -1,53 +1,114 @@
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from datetime import datetime
+import os
+import base64
+import email
+from email.policy import default
+from openai import OpenAI
+
+from dotenv import load_dotenv
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+client = OpenAI(
+    api_key=GEMINI_API_KEY,
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+)
 
 class handler(BaseHTTPRequestHandler):
 
-    # 1. Handle CORS Preflight (Required for POST requests from browser)
+   # --- CORS SUPPORT ---
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', '*')
         self.end_headers()
 
-    # 2. Handle the POST request
+    # --- POST REQUEST ---
     def do_POST(self):
         try:
-            # --- RECEIVE THE FILE ---
-            # Get the size of data to read
+            # 1. Read the length of the uploaded data
             content_length = int(self.headers.get('Content-Length', 0))
-            
-            # Read the data to clear the buffer (even though we are just returning mock data)
-            # This prevents connection reset errors
-            if content_length > 0:
-                self.rfile.read(content_length)
+            if content_length == 0:
+                self.send_error(400, "No data received")
+                return
 
-            response_data = {
-                    "result": True
-                }
+            # 2. Read the raw body
+            body = self.rfile.read(content_length)
 
-            # --- SEND RESPONSE ---
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
+            # 3. Parse the Multipart Form Data using the 'email' library
+            # We reconstruct a valid message header so the email library can parse the body
+            content_type = self.headers.get('Content-Type')
+            headers = b'Content-Type: ' + content_type.encode('utf-8') + b'\r\n'
+            msg_data = headers + b'\r\n' + body
             
-            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            # Parse the bytes into a message object
+            msg = email.message_from_bytes(msg_data, policy=default)
+
+            file_content = None
+            mime_type = "image/jpeg" # Default
+
+            # Walk through the message parts to find the file
+            for part in msg.walk():
+                if part.get_filename(): # This part is a file
+                    file_content = part.get_payload(decode=True)
+                    mime_type = part.get_content_type() or "image/jpeg"
+                    break
+
+            if not file_content:
+                self._send_json({"error": "No file found in request"}, 400)
+                return
+
+            # 4. Prepare data for Gemini
+            base64_image = base64.b64encode(file_content).decode('utf-8')
+
+            # 5. Call Gemini via OpenAI SDK
+            response = client.chat.completions.create(
+                model="gemini-1.5-flash",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Given this picture, check if it is a blueprint. If it is a blueprint then return true, if it is not a blueprint return false. The result must be in json format {\"result\": True}. No other information should be provided other than the json"
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                response_format={"type": "json_object"}
+            )
+
+            # 6. Extract and Return Result
+            gemini_response = response.choices[0].message.content
+            
+            # Ensure it is valid JSON before sending
+            try:
+                data = json.loads(gemini_response)
+                self._send_json(data, 200)
+            except json.JSONDecodeError:
+                # Fallback if model returns text instead of JSON
+                self._send_json({"result": "true" in gemini_response.lower()}, 200)
 
         except Exception as e:
-            # Basic error handling
-            self.send_response(500)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            print(f"Server Error: {e}")
+            self._send_json({"error": str(e)}, 500)
 
-    # Keep GET active for simple health checks
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
+    # --- HELPER TO SEND JSON ---
+    def _send_json(self, data, status_code):
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(json.dumps({"status": "API is online. Use POST to upload files."}).encode('utf-8'))
+        self.wfile.write(json.dumps(data).encode('utf-8'))
+
+    # --- HEALTH CHECK ---
+    def do_GET(self):
+        self._send_json({"status": "API is online"}, 200)

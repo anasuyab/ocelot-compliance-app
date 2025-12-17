@@ -1,1 +1,2 @@
-fastapi==0.117.1
+openai==1.59.0
+python-dotenv==1.0.1
