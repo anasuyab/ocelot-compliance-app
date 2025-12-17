@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MODEL_TYPE = "gemini-2.5-flash-lite"
 client = OpenAI(
     api_key=GEMINI_API_KEY,
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
@@ -65,7 +66,7 @@ class handler(BaseHTTPRequestHandler):
 
             # 5. Call Gemini via OpenAI SDK
             response = client.chat.completions.create(
-                model="gemini-1.5-flash",
+                model=MODEL_TYPE,
                 messages=[
                     {
                         "role": "user",
