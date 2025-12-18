@@ -6,6 +6,8 @@ import email
 from email.policy import default
 from openai import OpenAI
 
+from geminiService import call_gemini_api
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -67,31 +69,30 @@ class handler(BaseHTTPRequestHandler):
             # 4. Prepare data for Gemini
             base64_image = base64.b64encode(file_content).decode('utf-8')
 
-            # 5. Call Gemini via OpenAI SDK
-            response = client.chat.completions.create(
-                model=MODEL_TYPE,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "Given this picture, check if it is a blueprint. If it is a blueprint then return true, if it is not a blueprint return false. The result must be in json format {\"result\": True}. No other information should be provided other than the json"
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{mime_type};base64,{base64_image}"
-                                }
+            messages_payload = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": USER_PROMPT
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{mime_type};base64,{base64_image}"
                             }
-                        ]
-                    }
-                ],
-                response_format={"type": "json_object"}
-            )
+                        }
+                    ]
+                }
+            ]
 
-            # 6. Extract and Return Result
-            gemini_response = response.choices[0].message.content
+            # 4. Call the Service
+            # We pass the Model Name and the Messages as requested
+            gemini_response = call_gemini_api(
+                model=MODEL_TYPE, 
+                messages=messages_payload
+            )
             
             # Ensure it is valid JSON before sending
             try:
