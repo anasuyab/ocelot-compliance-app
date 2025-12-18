@@ -1,173 +1,119 @@
 from http.server import BaseHTTPRequestHandler
 import json
-from datetime import datetime
+import os
+import base64
+import email
+import sys
+from email.policy import default
+from dotenv import load_dotenv
+
+# --- 1. SETUP PATHS & IMPORTS ---
+# This ensures we can import geminiService regardless of where this runs
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+from geminiService import call_gemini_api
+
+load_dotenv()
+
+# --- 2. CONFIGURATION ---
+# Using 2.0/2.5 Pro or Flash is recommended for coordinate detection tasks
+MODEL_TYPE = "gemini-2.0-flash" 
+
+# We strictly define the output format in the prompt
+USER_PROMPT = (
+    "Given this picture, identify the rooms and their approximate 2D bounding box coordinates. "
+    "There can be multiple rooms of the same type. "
+    "Assign a distinct RGBA color string for each unique room 'type'. "
+    "For example, all 'entrance' types should have the exact same color, but different IDs and bounds. "
+    "Return ONLY valid JSON matching this exact structure, no markdown or text:\n\n"
+    "{\n"
+    "  \"rooms\": [\n"
+    "    { \"id\": 1, \"label\": \"Vestibule\", \"type\": \"entrance\", \"bounds\": { \"x\": 0, \"y\": 0, \"width\": 100, \"height\": 100 }, \"color\": \"rgba(59, 130, 246, 0.3)\" }\n"
+    "  ]\n"
+    "}"
+)
 
 class handler(BaseHTTPRequestHandler):
 
-    # 1. Handle CORS Preflight (Required for POST requests from browser)
+    # --- CORS SUPPORT ---
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', '*')
         self.end_headers()
 
-    # 2. Handle the POST request
+    # --- POST REQUEST ---
     def do_POST(self):
         try:
-            # --- RECEIVE THE FILE ---
-            # Get the size of data to read
+            # 1. Parse Input
             content_length = int(self.headers.get('Content-Length', 0))
-            
-            # Read the data to clear the buffer (even though we are just returning mock data)
-            # This prevents connection reset errors
-            if content_length > 0:
-                self.rfile.read(content_length)
+            if content_length == 0:
+                self.send_error(400, "No data received")
+                return
 
-            response_data = {
-                "rooms": [
-                    {
-                    "id": 1,
-                    "label": "Vestibule",
-                    "type": "entrance",
-                    "bounds": {
-                        "x": 310,
-                        "y": 880,
-                        "width": 200,
-                        "height": 150
-                    },
-                    "color": "rgba(59, 130, 246, 0.3)"
-                    },
-                    {
-                    "id": 2,
-                    "label": "Lobby",
-                    "type": "common",
-                    "bounds": {
-                        "x": 350,
-                        "y": 750,
-                        "width": 150,
-                        "height": 130
-                    },
-                    "color": "rgba(34, 197, 94, 0.3)"
-                    },
-                    {
-                    "id": 3,
-                    "label": "Dance",
-                    "type": "activity",
-                    "bounds": {
-                        "x": 60,
-                        "y": 650,
-                        "width": 240,
-                        "height": 250
-                    },
-                    "color": "rgba(168, 85, 247, 0.3)"
-                    },
-                    {
-                    "id": 4,
-                    "label": "Multipurpose",
-                    "type": "activity",
-                    "bounds": {
-                        "x": 60,
-                        "y": 380,
-                        "width": 240,
-                        "height": 270
-                    },
-                    "color": "rgba(168, 85, 247, 0.3)"
-                    },
-                    {
-                    "id": 5,
-                    "label": "Art",
-                    "type": "activity",
-                    "bounds": {
-                        "x": 60,
-                        "y": 280,
-                        "width": 160,
-                        "height": 100
-                    },
-                    "color": "rgba(168, 85, 247, 0.3)"
-                    },
-                    {
-                    "id": 6,
-                    "label": "Lounge",
-                    "type": "common",
-                    "bounds": {
-                        "x": 290,
-                        "y": 360,
-                        "width": 160,
-                        "height": 160
-                    },
-                    "color": "rgba(34, 197, 94, 0.3)"
-                    },
-                    {
-                    "id": 7,
-                    "label": "Exercise",
-                    "type": "activity",
-                    "bounds": {
-                        "x": 350,
-                        "y": 150,
-                        "width": 140,
-                        "height": 210
-                    },
-                    "color": "rgba(168, 85, 247, 0.3)"
-                    },
-                    {
-                    "id": 8,
-                    "label": "Office",
-                    "type": "administrative",
-                    "bounds": {
-                        "x": 350,
-                        "y": 530,
-                        "width": 120,
-                        "height": 100
-                    },
-                    "color": "rgba(251, 146, 60, 0.3)"
-                    },
-                    {
-                    "id": 9,
-                    "label": "Reception",
-                    "type": "administrative",
-                    "bounds": {
-                        "x": 430,
-                        "y": 650,
-                        "width": 100,
-                        "height": 80
-                    },
-                    "color": "rgba(251, 146, 60, 0.3)"
-                    },
-                    {
-                    "id": 10,
-                    "label": "Gymnasium",
-                    "type": "activity",
-                    "bounds": {
-                        "x": 520,
-                        "y": 220,
-                        "width": 380,
-                        "height": 550
-                    },
-                    "color": "rgba(168, 85, 247, 0.3)"
-                    }
-                ]} 
-
-            # --- SEND RESPONSE ---
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
+            body = self.rfile.read(content_length)
+            content_type = self.headers.get('Content-Type', '')
             
-            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            # Helper to create valid email message for parsing
+            headers = b'Content-Type: ' + content_type.encode('utf-8') + b'\r\n'
+            msg = email.message_from_bytes(headers + b'\r\n' + body, policy=default)
+
+            file_content = None
+            mime_type = "image/jpeg"
+
+            for part in msg.walk():
+                if part.get_filename():
+                    file_content = part.get_payload(decode=True)
+                    mime_type = part.get_content_type() or "image/jpeg"
+                    break
+
+            if not file_content:
+                self._send_json({"error": "No file found in request"}, 400)
+                return
+
+            # 2. Encode Image
+            base64_image = base64.b64encode(file_content).decode('utf-8')
+
+            # 3. Construct Messages
+            messages_payload = [
+                {
+                    "role": "user",
+                    "content": [
+                        { "type": "text", "text": USER_PROMPT },
+                        { 
+                            "type": "image_url", 
+                            "image_url": { "url": f"data:{mime_type};base64,{base64_image}" } 
+                        }
+                    ]
+                }
+            ]
+
+            # 4. Call Gemini Service
+            gemini_response = call_gemini_api(
+                model=MODEL_TYPE, 
+                messages=messages_payload
+            )
+            
+            # 5. Parse and Return
+            try:
+                data = json.loads(gemini_response)
+                self._send_json(data, 200)
+            except json.JSONDecodeError:
+                print(f"Invalid JSON from Gemini: {gemini_response}")
+                self._send_json({"error": "Failed to generate valid JSON", "raw_response": gemini_response}, 500)
 
         except Exception as e:
-            # Basic error handling
-            self.send_response(500)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            print(f"Server Error: {e}")
+            self._send_json({"error": str(e)}, 500)
 
-    # Keep GET active for simple health checks
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
+    # --- HELPERS ---
+    def _send_json(self, data, status_code):
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(json.dumps({"status": "API is online. Use POST to upload files."}).encode('utf-8'))
+        self.wfile.write(json.dumps(data).encode('utf-8'))
+
+    def do_GET(self):
+        self._send_json({"status": "Room Detection API is online"}, 200)

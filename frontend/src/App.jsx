@@ -4,11 +4,12 @@ import { FileText } from 'lucide-react';
 // 1. Logic & Data Imports
 import { getThemeFromURL } from './themes/themes';
 import { useBlueprintAnalysis } from './hooks/useBlueprintAnalysis';
-import { useBlueprintValidation } from './hooks/useBlueprintValidation'; // <--- Import new hook
+import { useBlueprintValidation } from './hooks/useBlueprintValidation';
 
 // 2. View Component Imports
 import UploadView from './components/views/UploadView';
 import AnalysisView from './components/views/AnalysisView';
+import ReviewView from './components/views/ReviewView'; // <--- NEW IMPORT
 import ComplianceReport from './components/views/ComplianceReport';
 import StepIndicator from './components/common/StepIndicator';
 
@@ -16,10 +17,13 @@ const App = () => {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [blueprintImage, setBlueprintImage] = useState(null);
   
-  // 3. Use the Custom Hooks
+  // New state to track if we have finished the interactive review
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [finalReportData, setFinalReportData] = useState(null);
+
   const { 
-    status,        
-    progress,      
+    status,         
+    progress,       
     result,        
     error: analysisError, 
     startAnalysis, 
@@ -34,17 +38,22 @@ const App = () => {
   } = useBlueprintValidation();
 
   const theme = getThemeFromURL();
-
-  // Combine errors for the main banner
   const displayError = validationError || analysisError;
 
+  // Updated Logic: We insert 'review' between analyzing and report
   const getCurrentStep = () => {
-    switch (status) {
-      case 'analyzing': return 'analyzing';
-      case 'complete': return 'report';
-      case 'error': return 'upload';
-      default: return 'upload';
+    if (status === 'error') return 'upload';
+    if (status === 'analyzing') return 'analyzing';
+    
+    // When analysis is complete...
+    if (status === 'complete') {
+      // If we haven't finished reviewing, show review step
+      if (!hasReviewed) return 'review';
+      // If review is done, show report
+      return 'report';
     }
+    
+    return 'upload';
   };
 
   const currentStep = getCurrentStep();
@@ -54,9 +63,7 @@ const App = () => {
     const file = e.target.files[0];
     if (file) {
       setUploadedFile(file);
-      // Reset validation state when a new file is chosen
       resetValidation(); 
-      
       const reader = new FileReader();
       reader.onload = (event) => {
         setBlueprintImage(event.target.result);
@@ -65,22 +72,28 @@ const App = () => {
     }
   };
 
-  // --- CHAINED LOGIC HERE ---
   const handleStartAnalysis = async () => {
     if (uploadedFile) {
-      // Step 1: Validate
       const isValid = await validateBlueprint(uploadedFile);
-      
-      // Step 2: If valid, Analyze
       if (isValid) {
         startAnalysis(uploadedFile);
       }
     }
   };
 
+  // Called when user clicks "Generate Report" in the ReviewView
+  const handleReviewComplete = (editedRooms) => {
+    // In a real app, you might re-run compliance checks here against the edited rooms
+    // For now, we update the result with the user's edits
+    setFinalReportData({ ...result, rooms: editedRooms });
+    setHasReviewed(true);
+  };
+
   const handleReset = () => {
     setUploadedFile(null);
     setBlueprintImage(null);
+    setHasReviewed(false); // Reset review state
+    setFinalReportData(null);
     resetValidation();
     resetAnalysis();
   };
@@ -111,27 +124,31 @@ const App = () => {
           </div>
         )}
 
-        {/* --- Progress Steps --- */}
+        {/* --- Progress Steps (Added Review Step) --- */}
         <div className="mb-8 flex items-center justify-center gap-4">
           <StepIndicator 
-            number={1} 
-            label="Upload" 
+            number={1} label="Upload" 
             active={currentStep === 'upload'} 
             completed={currentStep !== 'upload'} 
             theme={theme} 
           />
-          <div className={`w-16 h-0.5 ${theme.stepDivider}`}></div>
+          <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
           <StepIndicator 
-            number={2} 
-            label="Analysis" 
+            number={2} label="Analysis" 
             active={currentStep === 'analyzing'} 
+            completed={currentStep === 'review' || currentStep === 'report'} 
+            theme={theme} 
+          />
+          <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
+          <StepIndicator 
+            number={3} label="Review" 
+            active={currentStep === 'review'} 
             completed={currentStep === 'report'} 
             theme={theme} 
           />
-          <div className={`w-16 h-0.5 ${theme.stepDivider}`}></div>
+          <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
           <StepIndicator 
-            number={3} 
-            label="Report" 
+            number={4} label="Report" 
             active={currentStep === 'report'} 
             theme={theme} 
           />
@@ -145,7 +162,7 @@ const App = () => {
             blueprintImage={blueprintImage}
             onUpload={handleFileUpload}
             onStartAnalysis={handleStartAnalysis}
-            isValidating={validationStatus === 'validating'} // Pass loading state
+            isValidating={validationStatus === 'validating'}
           />
         )}
 
@@ -156,10 +173,24 @@ const App = () => {
           />
         )}
 
-        {currentStep === 'report' && result && (
+        {/* New Review Step */}
+        {currentStep === 'review' && result && (
+          <ReviewView 
+            theme={theme}
+            blueprintImage={blueprintImage}
+            // Assuming 'result' currently contains the raw detected rooms or similar structure
+            // If result is { rooms: [...] }, pass result.rooms
+            initialRooms={result.rooms || result} 
+            onComplete={handleReviewComplete}
+            onReset={handleReset}
+          />
+        )}
+
+        {currentStep === 'report' && (
           <ComplianceReport 
             theme={theme}
-            report={result} 
+            // Use the data modified by the review step
+            report={finalReportData || result} 
             onReset={handleReset}
           />
         )}
