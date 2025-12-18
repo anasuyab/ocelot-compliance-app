@@ -3,10 +3,13 @@ import json
 import os
 import base64
 import email
+import sys
 from email.policy import default
 from openai import OpenAI
 
-from geminiService import call_gemini_api
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+from gemini_service import call_gemini_api
 
 from dotenv import load_dotenv
 load_dotenv()
