@@ -9,7 +9,7 @@ from openai import OpenAI
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
-from gemini_service import call_gemini_api
+from geminiService import call_gemini_api
 
 from dotenv import load_dotenv
 load_dotenv()
