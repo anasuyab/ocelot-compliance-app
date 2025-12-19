@@ -31,7 +31,7 @@ export const useBlueprintAnalysis = () => {
 
     try {
       // 3. Make the API Call
-      const data = await complianceApi.analyzeBlueprint(file);
+      const data = await complianceApi.detectRooms(file);
       
       // 4. API SUCCESS!
       // Kill the simulation timer immediately
