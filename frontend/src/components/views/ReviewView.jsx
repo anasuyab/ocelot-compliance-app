@@ -1,222 +1,359 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle, Edit3, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import React, { useState, useRef } from 'react';
 
-const ReviewView = ({ theme, blueprintImage, initialRooms = [], onComplete, onReset }) => {
-  // Local state for the interactive view
+// --- Helper: Generate unique IDs ---
+const generateId = () => Date.now();
+
+// --- Helper: Calculate Centroids for Labels ---
+const getLabelPosition = (room) => {
+  if (room.type === 'rect') {
+    return { x: room.coords.x + room.coords.w / 2, y: room.coords.y + room.coords.h / 2 };
+  } else if (room.type === 'circle') {
+    return { x: room.coords.cx, y: room.coords.cy };
+  } else if (room.type === 'polygon') {
+    const x = room.points.reduce((acc, p) => acc + p[0], 0) / room.points.length;
+    const y = room.points.reduce((acc, p) => acc + p[1], 0) / room.points.length;
+    return { x, y };
+  }
+  return { x: 0, y: 0 };
+};
+
+const EditorView = ({ theme = 'light', blueprintImage, initialRooms = [], onComplete }) => {
+  // --- State ---
   const [rooms, setRooms] = useState(initialRooms);
-  const [selectedRoom, setSelectedRoom] = useState(null);
-  const [zoom, setZoom] = useState(1);
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
+  const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
+  
+  // Interaction State
+  const [dragState, setDragState] = useState(null); 
+  const svgRef = useRef(null);
 
-  // Sync props if initialRooms updates later
-  useEffect(() => {
-    if (initialRooms.length > 0) {
-      setRooms(initialRooms);
+  // --- Calibration State ---
+  const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [pxPerFoot, setPxPerFoot] = useState(4.5); 
+
+  // --- 1. Image Loading ---
+  const onImageLoad = (event) => {
+    setDimensions({ w: event.target.naturalWidth, h: event.target.naturalHeight });
+  };
+
+  // --- 2. Auto-Dimension Calculator ---
+  const updateRoomDimensionsText = (room) => {
+    let dimString = "";
+    if (room.type === 'rect') {
+      const wFt = Math.round(room.coords.w / pxPerFoot);
+      const hFt = Math.round(room.coords.h / pxPerFoot);
+      dimString = `${wFt}ft x ${hFt}ft`;
+    } else if (room.type === 'circle') {
+      const dFt = Math.round((room.coords.r * 2) / pxPerFoot);
+      dimString = `${dFt}ft Dia`;
+    } else if (room.type === 'polygon') {
+      // Calculate Bounding Box for polygon to get rough dimensions
+      const xs = room.points.map(p => p[0]);
+      const ys = room.points.map(p => p[1]);
+      const w = Math.max(...xs) - Math.min(...xs);
+      const h = Math.max(...ys) - Math.min(...ys);
+      dimString = `${Math.round(w / pxPerFoot)}ft x ${Math.round(h / pxPerFoot)}ft (Irreg)`;
     }
-  }, [initialRooms]);
-
-  const roomTypes = [
-    { value: 'administrative', label: 'Administrative', color: 'rgba(251, 146, 60, 0.3)', border: 'border-orange-400' },
-    { value: 'activity', label: 'Activity/Recreation', color: 'rgba(168, 85, 247, 0.3)', border: 'border-purple-400' },
-    { value: 'common', label: 'Common Area', color: 'rgba(34, 197, 94, 0.3)', border: 'border-green-400' },
-    { value: 'entrance', label: 'Entrance/Circulation', color: 'rgba(59, 130, 246, 0.3)', border: 'border-blue-400' },
-    { value: 'service', label: 'Service/Support', color: 'rgba(239, 68, 68, 0.3)', border: 'border-red-400' }
-  ];
-
-  const handleRoomClick = (room) => setSelectedRoom(room);
-
-  const handleRoomTypeChange = (newType) => {
-    const typeInfo = roomTypes.find(t => t.value === newType);
-    const updatedRooms = rooms.map(room => 
-      room.id === selectedRoom.id 
-        ? { ...room, type: newType, color: typeInfo.color }
-        : room
-    );
-    setRooms(updatedRooms);
-    setSelectedRoom(prev => ({ ...prev, type: newType, color: typeInfo.color }));
+    return { ...room, dimensions: dimString };
   };
 
-  const handleRoomLabelChange = (newLabel) => {
-    const updatedRooms = rooms.map(room => 
-      room.id === selectedRoom.id ? { ...room, label: newLabel } : room
-    );
-    setRooms(updatedRooms);
-    setSelectedRoom(prev => ({ ...prev, label: newLabel }));
+  // --- 3. CRUD Actions ---
+  const handleAddRoom = (type) => {
+    // Spawn in the center of the current view roughly
+    const startX = 200; 
+    const startY = 200;
+    
+    let newRoom = {
+      id: generateId(),
+      name: "New Room",
+      type: type,
+      color: "rgba(0, 123, 255, 0.5)",
+      dimensions: "0ft x 0ft"
+    };
+
+    if (type === 'rect') {
+      newRoom.coords = { x: startX, y: startY, w: 100, h: 100 };
+    } else if (type === 'circle') {
+      newRoom.coords = { cx: startX + 50, cy: startY + 50, r: 50 };
+    } else if (type === 'polygon') {
+      // Default Triangle
+      newRoom.points = [[startX, startY + 100], [startX + 50, startY], [startX + 100, startY + 100]];
+    }
+
+    newRoom = updateRoomDimensionsText(newRoom);
+    setRooms([...rooms, newRoom]);
+    setSelectedRoomId(newRoom.id);
   };
 
-  const handleComplete = () => {
-    // Pass the edited rooms back up to the parent to generate the final report
-    onComplete(rooms);
+  const handleDeleteRoom = () => {
+    if (selectedRoomId) {
+      setRooms(rooms.filter(r => r.id !== selectedRoomId));
+      setSelectedRoomId(null);
+    }
+  };
+
+  const handleUpdateName = (val) => {
+     setRooms(rooms.map(r => r.id === selectedRoomId ? { ...r, name: val } : r));
+  };
+
+  // --- 4. Mouse Logic ---
+  const getMousePos = (e) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return {
+      x: (svgP.x - viewTransform.x) / viewTransform.scale,
+      y: (svgP.y - viewTransform.y) / viewTransform.scale
+    };
+  };
+
+  const handleMouseDown = (e, type, roomId, index = null) => {
+    e.stopPropagation();
+    const pos = getMousePos(e);
+    setDragState({ type, roomId, index, startX: pos.x, startY: pos.y });
+    setSelectedRoomId(roomId);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!dragState) return;
+    const pos = getMousePos(e);
+    
+    setRooms(prevRooms => prevRooms.map(room => {
+      if (room.id !== dragState.roomId) return room;
+
+      const dx = pos.x - dragState.startX;
+      const dy = pos.y - dragState.startY;
+
+      let updatedRoom = { ...room };
+
+      if (dragState.type === 'move') {
+        if (room.type === 'rect') {
+          updatedRoom.coords = { ...room.coords, x: room.coords.x + dx, y: room.coords.y + dy };
+        } else if (room.type === 'circle') {
+          updatedRoom.coords = { ...room.coords, cx: room.coords.cx + dx, cy: room.coords.cy + dy };
+        } else if (room.type === 'polygon') {
+          updatedRoom.points = room.points.map(p => [p[0] + dx, p[1] + dy]);
+        }
+      } else if (dragState.type === 'resize-rect') {
+         updatedRoom.coords = { ...room.coords, w: Math.max(10, room.coords.w + dx), h: Math.max(10, room.coords.h + dy) };
+      } else if (dragState.type === 'resize-circle') {
+         const newR = Math.sqrt(Math.pow(pos.x - room.coords.cx, 2) + Math.pow(pos.y - room.coords.cy, 2));
+         updatedRoom.coords = { ...room.coords, r: newR };
+      } else if (dragState.type === 'vertex') {
+        const newPoints = [...room.points];
+        newPoints[dragState.index] = [pos.x, pos.y];
+        updatedRoom.points = newPoints;
+      }
+
+      // ** AUTO UPDATE DIMENSIONS **
+      return updateRoomDimensionsText(updatedRoom);
+    }));
+
+    if (dragState.type !== 'vertex') {
+       setDragState(prev => ({ ...prev, startX: pos.x, startY: pos.y }));
+    }
+  };
+
+  const handleMouseUp = () => {
+    setDragState(null);
+  };
+
+  // --- Styles ---
+  const handleStyle = { fill: 'white', stroke: '#007bff', strokeWidth: 2, cursor: 'crosshair' };
+  
+  const sidebarStyle = { 
+    width: '320px', 
+    padding: '20px', 
+    background: '#fff', 
+    borderRight: '1px solid #ddd', 
+    display: 'flex', 
+    flexDirection: 'column', 
+    gap: '15px',
+    boxShadow: '2px 0 5px rgba(0,0,0,0.05)',
+    zIndex: 10
+  };
+
+  // Styled Buttons
+  const buttonStyle = {
+    flex: 1,
+    padding: '10px 15px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    fontWeight: '500',
+    transition: 'background 0.2s'
+  };
+
+  const deleteButtonStyle = {
+    ...buttonStyle,
+    backgroundColor: '#dc3545', // Red
+    marginTop: '10px'
+  };
+
+  const actionButtonStyle = {
+      ...buttonStyle,
+      backgroundColor: '#28a745', // Green
+      marginTop: 'auto'
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)] min-h-[600px]">
+    <div style={{ display: 'flex', height: '100vh', fontFamily: 'sans-serif', backgroundColor: '#f5f5f5' }} 
+         onMouseMove={handleMouseMove} 
+         onMouseUp={handleMouseUp}>
       
-      {/* --- Left Panel: Controls & List --- */}
-      <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4">
+      {/* --- Sidebar --- */}
+      <div style={sidebarStyle}>
+        <h3 style={{margin: '0 0 10px 0', borderBottom: '2px solid #eee', paddingBottom: '10px'}}>Room Editor</h3>
         
-        {/* Legend */}
-        <div className={`${theme.cardBackground} rounded-xl shadow-lg p-4 border ${theme.cardBorder}`}>
-          <h3 className={`font-bold ${theme.textPrimary} mb-3`}>Room Types</h3>
-          <div className="space-y-2">
-            {roomTypes.map(type => (
-              <div key={type.value} className="flex items-center gap-2 text-sm">
-                <div className={`w-4 h-4 rounded border-2 ${type.border}`} style={{ backgroundColor: type.color }}></div>
-                <span className="text-slate-700">{type.label}</span>
-                <span className="text-slate-500 text-xs ml-auto">
-                  {rooms.filter(r => r.type === type.value).length}
-                </span>
-              </div>
-            ))}
+        {/* Toolbar */}
+        <div style={{display: 'flex', gap: '8px'}}>
+          <button style={buttonStyle} onClick={() => handleAddRoom('rect')}>+ Rect</button>
+          <button style={buttonStyle} onClick={() => handleAddRoom('circle')}>+ Circle</button>
+          <button style={buttonStyle} onClick={() => handleAddRoom('polygon')}>+ Poly</button>
+        </div>
+
+        {/* Global Settings */}
+        <div style={{ padding: '15px', background: '#f8f9fa', borderRadius: '6px', border: '1px solid #e9ecef' }}>
+          <strong style={{display:'block', marginBottom:'10px', color: '#555'}}>Calibration</strong>
+          
+          <div style={{marginBottom: '15px'}}>
+             <label style={{fontSize: '0.85rem', color: '#666', display:'block', marginBottom: '5px'}}>Pan / Offset (X):</label>
+             <input style={{width: '100%'}} type="range" min="-200" max="200" value={viewTransform.x} onChange={e => setViewTransform({...viewTransform, x: Number(e.target.value)})} />
+          </div>
+
+          <div>
+             <label style={{fontSize: '0.85rem', color: '#666', display:'block', marginBottom: '5px'}}>
+                Scale Ratio: <strong>{pxPerFoot} px/ft</strong>
+             </label>
+             <input style={{width: '100%'}} type="range" min="1" max="10" step="0.1" value={pxPerFoot} onChange={e => setPxPerFoot(Number(e.target.value))} />
           </div>
         </div>
 
-        {/* Room List */}
-        <div className={`flex-1 ${theme.cardBackground} rounded-xl shadow-lg border ${theme.cardBorder} overflow-hidden flex flex-col`}>
-          <div className="p-4 border-b border-slate-200 bg-slate-50">
-            <h3 className="font-bold text-slate-900">Detected Rooms ({rooms.length})</h3>
-            <p className="text-xs text-slate-600 mt-1">Click a room to edit</p>
-          </div>
-          <div className="overflow-y-auto flex-1">
-            {rooms.map(room => {
-              const typeInfo = roomTypes.find(t => t.value === room.type);
-              return (
-                <button
-                  key={room.id}
-                  onClick={() => handleRoomClick(room)}
-                  className={`w-full p-3 text-left border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                    selectedRoom?.id === room.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded border-2 ${typeInfo?.border}`} style={{ backgroundColor: room.color }}></div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-slate-900 text-sm">{room.label}</p>
-                      <p className="text-xs text-slate-500">{typeInfo?.label}</p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {/* Selected Room Editor */}
+        {selectedRoomId ? (
+          <div style={{ borderTop: '1px solid #ddd', paddingTop: '15px' }}>
+            <h4 style={{margin: '0 0 10px 0'}}>Edit Selected Room</h4>
+            
+            <label style={{display:'block', marginBottom:'5px', fontSize:'0.9rem'}}>Room Name:</label>
+            <input 
+              type="text" 
+              value={rooms.find(r => r.id === selectedRoomId)?.name || ''} 
+              onChange={(e) => handleUpdateName(e.target.value)} 
+              style={{ width: '100%', padding: '8px', marginBottom: '15px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            />
+            
+            <div style={{background: '#e9ecef', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '0.9rem'}}>
+               <strong>Dimensions:</strong> {rooms.find(r => r.id === selectedRoomId)?.dimensions}
+               <div style={{fontSize: '0.75rem', color: '#666', marginTop: '4px'}}>* Drag shape handles to update</div>
+            </div>
 
-        {/* Editor (Only visible when selected) */}
-        {selectedRoom && (
-          <div className={`${theme.cardBackground} rounded-xl shadow-lg p-4 border ${theme.cardBorder}`}>
-             <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900">Edit Room</h3>
-                <Edit3 className="w-4 h-4 text-slate-400" />
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Room Name</label>
-                  <input 
-                    type="text"
-                    value={selectedRoom.label}
-                    onChange={(e) => handleRoomLabelChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Room Type</label>
-                  <select 
-                    value={selectedRoom.type}
-                    onChange={(e) => handleRoomTypeChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {roomTypes.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+            <button style={deleteButtonStyle} onClick={handleDeleteRoom}>
+              Delete Room
+            </button>
+          </div>
+        ) : (
+          <div style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', padding: '20px', border: '2px dashed #ddd', borderRadius: '8px' }}>
+            Select a room on the map to edit properties.
           </div>
         )}
 
-        {/* Actions */}
-        <div className="space-y-2 mt-auto">
-          <button 
-            onClick={handleComplete}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            <CheckCircle className="w-5 h-5" />
-            Generate Report
-          </button>
-          <button 
-            onClick={onReset}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            <RotateCcw className="w-5 h-5" />
-            Start Over
-          </button>
-        </div>
+        {/* Footer Actions */}
+        <button 
+            style={actionButtonStyle} 
+            onClick={() => onComplete(rooms)} // <--- Passes data to parent
+        >
+            Finish & Save
+        </button>
       </div>
 
-      {/* --- Right Panel: Blueprint Viewer --- */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-white rounded-xl shadow-lg border border-slate-200">
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
-          <h3 className="font-bold text-slate-900">Blueprint Review</h3>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} className="p-2 hover:bg-slate-200 rounded-lg">
-              <ZoomOut className="w-4 h-4 text-slate-600" />
-            </button>
-            <span className="text-sm text-slate-600 w-12 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="p-2 hover:bg-slate-200 rounded-lg">
-              <ZoomIn className="w-4 h-4 text-slate-600" />
-            </button>
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-auto p-6 bg-slate-50 relative">
-          <div className="relative inline-block origin-top-left transition-transform duration-200" style={{ transform: `scale(${zoom})` }}>
-            {blueprintImage && (
-              <>
-                <img 
-                  src={blueprintImage} 
-                  alt="Blueprint" 
-                  className="max-w-full h-auto rounded border border-slate-300"
-                />
-                <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ mixBlendMode: 'multiply' }}>
-                  {rooms.map(room => {
-                    const isSelected = selectedRoom?.id === room.id;
-                    const typeInfo = roomTypes.find(t => t.value === room.type);
-                    return (
-                      <g key={room.id}>
-                        <rect
-                          x={room.bounds.x}
-                          y={room.bounds.y}
-                          width={room.bounds.width}
-                          height={room.bounds.height}
-                          fill={room.color}
-                          stroke={isSelected ? '#3B82F6' : typeInfo?.border.replace('border-', '#').replace('-400', '')} // Simplified color parsing
-                          strokeWidth={isSelected ? 3 : 2}
-                          strokeDasharray={isSelected ? '5,5' : 'none'}
-                          className="pointer-events-auto cursor-pointer transition-all hover:opacity-80"
-                          onClick={() => handleRoomClick(room)}
+      {/* --- Canvas --- */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#333', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ position: 'relative', boxShadow: '0 0 20px rgba(0,0,0,0.5)' }}>
+          <img 
+            src={blueprintImage} 
+            alt="Blueprint" 
+            onLoad={onImageLoad}
+            style={{ display: 'block', maxWidth: '100%', maxHeight: '90vh', pointerEvents: 'none' }} 
+          />
+          
+          <svg 
+            ref={svgRef}
+            viewBox={`0 0 ${dimensions.w} ${dimensions.h}`}
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+          >
+            <g transform={`translate(${viewTransform.x}, ${viewTransform.y}) scale(${viewTransform.scale})`}>
+              {rooms.map((room) => {
+                const isSelected = selectedRoomId === room.id;
+                
+                // Common shape props
+                const commonProps = {
+                  key: room.id,
+                  fill: room.color,
+                  stroke: isSelected ? '#007bff' : 'black',
+                  strokeWidth: isSelected ? 3 : 1,
+                  opacity: 0.5,
+                  style: { cursor: 'move' },
+                  onMouseDown: (e) => handleMouseDown(e, 'move', room.id)
+                };
+
+                // Logic to draw handles
+                let handles = null;
+                if (isSelected) {
+                   if (room.type === 'rect') {
+                     handles = (
+                       <rect x={room.coords.x + room.coords.w - 10} y={room.coords.y + room.coords.h - 10} width={20} height={20} {...handleStyle}
+                         onMouseDown={(e) => handleMouseDown(e, 'resize-rect', room.id)}
+                       />
+                     );
+                   } else if (room.type === 'circle') {
+                      handles = (
+                       <circle cx={room.coords.cx + room.coords.r} cy={room.coords.cy} r={8} {...handleStyle}
+                         onMouseDown={(e) => handleMouseDown(e, 'resize-circle', room.id)}
+                       />
+                     );
+                   } else if (room.type === 'polygon') {
+                      handles = room.points.map((pt, idx) => (
+                        <circle key={idx} cx={pt[0]} cy={pt[1]} r={6} {...handleStyle}
+                          onMouseDown={(e) => handleMouseDown(e, 'vertex', room.id, idx)}
                         />
-                        <text
-                          x={room.bounds.x + room.bounds.width / 2}
-                          y={room.bounds.y + room.bounds.height / 2}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          fill="#1F2937"
-                          fontSize="12"
-                          fontWeight="600"
-                          className="pointer-events-none select-none"
-                        >
-                          {room.label}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
-              </>
-            )}
-          </div>
+                      ));
+                   }
+                }
+
+                // Logic to draw shapes
+                let shape = null;
+                if (room.type === 'rect') shape = <rect x={room.coords.x} y={room.coords.y} width={room.coords.w} height={room.coords.h} {...commonProps} />;
+                else if (room.type === 'circle') shape = <circle cx={room.coords.cx} cy={room.coords.cy} r={room.coords.r} {...commonProps} />;
+                else if (room.type === 'polygon') shape = <polygon points={room.points.map(p => p.join(',')).join(' ')} {...commonProps} />;
+                
+                const labelPos = getLabelPosition(room);
+
+                return (
+                  <g key={room.id}>
+                    {shape}
+                    {handles}
+                    <text x={labelPos.x} y={labelPos.y} textAnchor="middle" fontSize="14" fontWeight="bold" fill="white" style={{pointerEvents:'none', textShadow: '0px 0px 4px #000'}}>
+                      {room.name}
+                    </text>
+                    {/* Show live dimensions below name */}
+                    <text x={labelPos.x} y={labelPos.y + 15} textAnchor="middle" fontSize="11" fill="#eee" style={{pointerEvents:'none', textShadow: '0px 0px 4px #000'}}>
+                      {room.dimensions}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
         </div>
       </div>
     </div>
   );
 };
 
-export default ReviewView;
+export default EditorView;
