@@ -12,6 +12,7 @@ import AnalysisView from './components/views/AnalysisView';
 import ReviewView from './components/views/ReviewView'; // <--- NEW IMPORT
 import ComplianceReport from './components/views/ComplianceReport';
 import StepIndicator from './components/common/StepIndicator';
+import { useReportGeneration } from './hooks/useReportGeneration';
 
 const App = () => {
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -37,8 +38,15 @@ const App = () => {
     resetValidation
   } = useBlueprintValidation();
 
+  const {
+    generationStatus,
+    generationError,
+    generateReport,
+    report
+  } = useReportGeneration();
+
   const theme = getThemeFromURL();
-  const displayError = validationError || analysisError;
+  const displayError = validationError || analysisError || generationError;
 
   // Updated Logic: We insert 'review' between analyzing and report
   const getCurrentStep = () => {
@@ -83,8 +91,7 @@ const App = () => {
 
   // Called when user clicks "Generate Report" in the ReviewView
   const handleReviewComplete = (editedRooms) => {
-    // In a real app, you might re-run compliance checks here against the edited rooms
-    // For now, we update the result with the user's edits
+    generateReport(uploadedFile, editedRooms)
     setFinalReportData({ ...result, rooms: editedRooms });
     setHasReviewed(true);
   };
@@ -173,7 +180,7 @@ const App = () => {
           />
         )}
 
-        {/* New Review Step */}
+        {/* Review Step */}
         {currentStep === 'review' && result && (
           <ReviewView 
             theme={theme}
@@ -186,14 +193,16 @@ const App = () => {
           />
         )}
 
-        {currentStep === 'report' && (
+        {currentStep === 'report' && report && (
           <ComplianceReport 
             theme={theme}
+            blueprintImage={blueprintImage} 
             // Use the data modified by the review step
-            report={finalReportData || result} 
+            report={report} 
             onReset={handleReset}
+            isGenerating={generationStatus === 'generating'}
           />
-        )}
+        )} 
       </div>
     </div>
   );

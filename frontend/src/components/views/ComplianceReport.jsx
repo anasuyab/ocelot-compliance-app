@@ -3,7 +3,7 @@ import { CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronRight, Search,
 import SummaryCard from '../common/SummaryCard';
 import DetailRow from '../common/DetailRow';
 
-const ComplianceReport = ({ report, onReset, theme }) => {
+const ComplianceReport = ({ report, blueprintImage,  onReset, theme }) => {
   const [expandedCategories, setExpandedCategories] = useState({});
 
   const toggleCategory = (category) => {
@@ -39,7 +39,7 @@ const ComplianceReport = ({ report, onReset, theme }) => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold mb-1">Compliance Report</h2>
-              <p className="text-blue-100">{report.blueprint.name}</p>
+              <p className="text-blue-100">{blueprintImage}</p>
             </div>
             <button 
               onClick={onReset}

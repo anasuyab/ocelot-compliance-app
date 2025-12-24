@@ -17,7 +17,7 @@ const getLabelPosition = (room) => {
   return { x: 0, y: 0 };
 };
 
-const EditorView = ({ theme = 'light', blueprintImage, initialRooms = [], onComplete }) => {
+const EditorView = ({ theme = 'default', blueprintImage, initialRooms = [], onComplete }) => {
   // --- State ---
   const [rooms, setRooms] = useState(initialRooms);
   const [selectedRoomId, setSelectedRoomId] = useState(null);
