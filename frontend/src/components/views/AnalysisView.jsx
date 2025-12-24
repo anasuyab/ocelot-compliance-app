@@ -28,8 +28,8 @@ const AnalysisView = ({ theme, progress }) => {
           
           <div className="mt-8 space-y-3 text-left">
             <AnalysisStep label="Extracting blueprint features" completed={progress > 20} />
-            <AnalysisStep label="Retrieving relevant policies" completed={progress > 40} />
-            <AnalysisStep label="Checking space requirements" completed={progress > 60} />
+            <AnalysisStep label="Retrieving room coordinates" completed={progress > 40} />
+            <AnalysisStep label="Checking space dimensions" completed={progress > 60} />
             {/* ... other steps ... */}
           </div>
         </div>
