@@ -1,8 +1,8 @@
-# Getting Started with Create React App
+# Ocelot Compliance Application: Frontend
+This is the react frontend of the Ocelot Compliance App. Endpoint is: https://ocelot-compliance-app-ux.vercel.app/
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+## To run locally
 
 In the project directory, you can run:
 
