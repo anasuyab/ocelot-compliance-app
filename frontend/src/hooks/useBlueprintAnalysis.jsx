@@ -27,7 +27,7 @@ export const useBlueprintAnalysis = () => {
         if (prev >= 90) return 90;
         return prev + 10;
       });
-    }, 1000);
+    }, 2000);
 
     try {
       // 3. Make the API Call

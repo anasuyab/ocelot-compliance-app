@@ -86,6 +86,7 @@ export const complianceApi = {
       // when it sees a FormData body.
     });
 
+
     if (!response.ok) {
       // Try to get the error message from the server, or fallback to default
       let errorMessage = `Could not generate report: ${response.statusText}`;

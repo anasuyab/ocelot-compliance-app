@@ -39,7 +39,15 @@ const ComplianceReport = ({ report, blueprintImage,  onReset, theme }) => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold mb-1">Compliance Report</h2>
-              <p className="text-blue-100">{blueprintImage}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="px-2 py-1 bg-white/20 rounded text-sm text-white backdrop-blur-sm">
+                    Blueprint Analysis
+                </div>
+                {/* Optional: Show a tiny thumbnail instead */}
+                {blueprintImage && (
+                    <img src={blueprintImage} alt="Thumbnail" className="w-8 h-8 rounded object-cover border border-white/50" />
+                )}
+                </div>
             </div>
             <button 
               onClick={onReset}

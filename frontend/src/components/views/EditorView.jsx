@@ -293,7 +293,6 @@ const EditorView = ({ theme = 'default', blueprintImage, initialRooms = [], onCo
                 
                 // Common shape props
                 const commonProps = {
-                  key: room.id,
                   fill: room.color,
                   stroke: isSelected ? '#007bff' : 'black',
                   strokeWidth: isSelected ? 3 : 1,
