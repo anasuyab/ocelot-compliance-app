@@ -149,16 +149,9 @@ const App = () => {
           />
           <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
           <StepIndicator 
-            number={3} label="Preview" 
+            number={3} label="Review" 
             active={currentStep === 'annotated'} 
             completed={currentStep === 'review' || currentStep === 'report'} 
-            theme={theme} 
-          />
-          <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
-          <StepIndicator 
-            number={4} label="Review" 
-            active={currentStep === 'review'} 
-            completed={currentStep === 'report'} 
             theme={theme} 
           />
           <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
