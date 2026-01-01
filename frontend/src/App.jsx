@@ -3,13 +3,14 @@ import { FileText } from 'lucide-react';
 
 // 1. Logic & Data Imports
 import { getThemeFromURL } from './themes/themes';
-import { useBlueprintAnalysis } from './hooks/useBlueprintAnalysis';
+import { useBlueprintAnalysisV2 } from './hooks/useBlueprintAnalysisV2';
 import { useBlueprintValidation } from './hooks/useBlueprintValidation';
 
 // 2. View Component Imports
 import UploadView from './components/views/UploadView';
 import AnalysisView from './components/views/AnalysisView';
-import EditorView from './components/views/EditorView'; // <--- NEW IMPORT
+import AnnotatedView from './components/views/AnnotatedView';
+import EditorViewV2 from './components/views/EditorViewV2';
 import ComplianceReport from './components/views/ComplianceReport';
 import StepIndicator from './components/common/StepIndicator';
 import { useReportGeneration } from './hooks/useReportGeneration';
@@ -20,7 +21,7 @@ const App = () => {
   
   // New state to track if we have finished the interactive review
   const [hasReviewed, setHasReviewed] = useState(false);
-  const [finalReportData, setFinalReportData] = useState(null);
+  const [hasViewedAnnotations, setHasViewedAnnotations] = useState(false);
 
   const { 
     status,         
@@ -29,7 +30,7 @@ const App = () => {
     error: analysisError, 
     startAnalysis, 
     resetAnalysis  
-  } = useBlueprintAnalysis();
+  } = useBlueprintAnalysisV2();
 
   const {
     validationStatus,
@@ -48,15 +49,15 @@ const App = () => {
   const theme = getThemeFromURL();
   const displayError = validationError || analysisError || generationError;
 
-  // Updated Logic: We insert 'review' between analyzing and report
+  // Updated Logic: We insert 'annotated' and 'review' between analyzing and report
   const getCurrentStep = () => {
     if (status === 'error') return 'upload';
     if (status === 'analyzing') return 'analyzing';
     // When analysis is complete...
     if (status === 'complete') {
-      // If we haven't finished reviewing, show review step
-      if (!hasReviewed) return 'review';
-      // If review is done, show report
+      // First show annotated view
+      if (!hasViewedAnnotations) return 'annotated'; 
+      // Finally show report
       return 'report';
     }
     
@@ -91,6 +92,7 @@ const App = () => {
   // Called when user clicks "Generate Report" in the EditorView
   const handleReviewComplete = (editedRooms) => {
     // Trigger report generation and switch to report view
+    setHasViewedAnnotations(true)
     generateReport(uploadedFile, editedRooms);
     setHasReviewed(true);
   };
@@ -98,8 +100,8 @@ const App = () => {
   const handleReset = () => {
     setUploadedFile(null);
     setBlueprintImage(null);
-    setHasReviewed(false); // Reset review state
-    setFinalReportData(null);
+    setHasReviewed(false);
+    setHasViewedAnnotations(false);
     resetValidation();
     resetAnalysis();
   };
@@ -130,7 +132,7 @@ const App = () => {
           </div>
         )}
 
-        {/* --- Progress Steps (Added Review Step) --- */}
+        {/* --- Progress Steps (Added Annotated and Review Steps) --- */}
         <div className="mb-8 flex items-center justify-center gap-4">
           <StepIndicator 
             number={1} label="Upload" 
@@ -142,19 +144,26 @@ const App = () => {
           <StepIndicator 
             number={2} label="Analysis" 
             active={currentStep === 'analyzing'} 
+            completed={currentStep === 'annotated' || currentStep === 'review' || currentStep === 'report'} 
+            theme={theme} 
+          />
+          <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
+          <StepIndicator 
+            number={3} label="Preview" 
+            active={currentStep === 'annotated'} 
             completed={currentStep === 'review' || currentStep === 'report'} 
             theme={theme} 
           />
           <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
           <StepIndicator 
-            number={3} label="Review" 
+            number={4} label="Review" 
             active={currentStep === 'review'} 
             completed={currentStep === 'report'} 
             theme={theme} 
           />
           <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
           <StepIndicator 
-            number={4} label="Report" 
+            number={5} label="Report" 
             active={currentStep === 'report'} 
             theme={theme} 
           />
@@ -179,15 +188,14 @@ const App = () => {
           />
         )}
 
-        {/* Review Step */}
-        {currentStep === 'review' && result && (
-          <EditorView 
+        {/* Annotated Preview Step */}
+        {currentStep === 'annotated' && result && (
+          <AnnotatedView
             theme={theme}
             blueprintImage={blueprintImage}
-            // Assuming 'result' currently contains the raw detected rooms or similar structure
-            // If result is { rooms: [...] }, pass result.rooms
-            initialRooms={result.rooms || result} 
-            onComplete={handleReviewComplete}
+            roomsData={result.rooms || []}
+            imageMetadata={result.imageMetadata || null}
+            onNext={handleReviewComplete}
             onReset={handleReset}
           />
         )}
@@ -224,7 +232,6 @@ const App = () => {
             onReset={handleReset}
           />
         )}
-      
 
         {/* 4. DEBUGGING CATCH-ALL: Logic Gap Detector */}
         {currentStep === 'report' && generationStatus === 'complete' && !report && (

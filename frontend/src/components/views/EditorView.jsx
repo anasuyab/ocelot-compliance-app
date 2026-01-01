@@ -17,15 +17,17 @@ const getLabelPosition = (room) => {
   return { x: 0, y: 0 };
 };
 
-const EditorView = ({ theme = 'default', blueprintImage, initialRooms = [], onComplete }) => {
+const EditorView = ({ theme = 'default', blueprintImage, initialRooms = [], onComplete, imageMetadata = null }) => {
   // --- State ---
-  const [rooms, setRooms] = useState(initialRooms);
+  const [rooms, setRooms] = useState([]);
   const [selectedRoomId, setSelectedRoomId] = useState(null);
   const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
   
   // Interaction State
   const [dragState, setDragState] = useState(null); 
   const svgRef = useRef(null);
+  const imgRef = useRef(null);
+  const [initialRoomsScaled, setInitialRoomsScaled] = useState(false);
 
   // --- Calibration State ---
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, scale: 1 });
@@ -33,7 +35,66 @@ const EditorView = ({ theme = 'default', blueprintImage, initialRooms = [], onCo
 
   // --- 1. Image Loading ---
   const onImageLoad = (event) => {
-    setDimensions({ w: event.target.naturalWidth, h: event.target.naturalHeight });
+    const img = event.target;
+    const naturalW = img.naturalWidth;
+    const naturalH = img.naturalHeight;
+    const displayW = img.clientWidth;
+    const displayH = img.clientHeight;
+    
+    // Determine the source dimensions for coordinates
+    // Use metadata if provided, otherwise fall back to natural dimensions
+    const sourceW = imageMetadata?.width || naturalW;
+    const sourceH = imageMetadata?.height || naturalH;
+    
+    // Calculate the scale factor from source to display
+    const scale = displayW / sourceW;
+    
+    setDimensions({ 
+      w: naturalW, 
+      h: naturalH,
+      displayW: displayW,
+      displayH: displayH,
+      sourceW: sourceW,
+      sourceH: sourceH,
+      scale: scale
+    });
+    
+    console.log('Image dimensions:', { 
+      natural: { w: naturalW, h: naturalH },
+      source: { w: sourceW, h: sourceH },
+      display: { w: displayW, h: displayH },
+      scale 
+    });
+    
+    // Scale initial rooms to match display size
+    if (!initialRoomsScaled && initialRooms.length > 0) {
+      const scaledRooms = initialRooms.map(room => {
+        const scaledRoom = { ...room };
+        
+        if (room.type === 'rect') {
+          scaledRoom.coords = {
+            x: room.coords.x * scale,
+            y: room.coords.y * scale,
+            w: room.coords.w * scale,
+            h: room.coords.h * scale
+          };
+        } else if (room.type === 'circle') {
+          scaledRoom.coords = {
+            cx: room.coords.cx * scale,
+            cy: room.coords.cy * scale,
+            r: room.coords.r * scale
+          };
+        } else if (room.type === 'polygon') {
+          scaledRoom.points = room.points.map(([x, y]) => [x * scale, y * scale]);
+        }
+        
+        return scaledRoom;
+      });
+      
+      setRooms(scaledRooms);
+      setInitialRoomsScaled(true);
+      console.log('Scaled rooms from', sourceW, 'x', sourceH, 'to', displayW, 'x', displayH);
+    }
   };
 
   // --- 2. Auto-Dimension Calculator ---
@@ -276,17 +337,25 @@ const EditorView = ({ theme = 'default', blueprintImage, initialRooms = [], onCo
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#333', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ position: 'relative', boxShadow: '0 0 20px rgba(0,0,0,0.5)' }}>
           <img 
+            ref={imgRef}
             src={blueprintImage} 
             alt="Blueprint" 
             onLoad={onImageLoad}
             style={{ display: 'block', maxWidth: '100%', maxHeight: '90vh', pointerEvents: 'none' }} 
           />
           
-          <svg 
-            ref={svgRef}
-            viewBox={`0 0 ${dimensions.w} ${dimensions.h}`}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-          >
+          {dimensions.displayW > 0 && (
+            <svg 
+              ref={svgRef}
+              viewBox={`0 0 ${dimensions.displayW} ${dimensions.displayH}`}
+              style={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: 0, 
+                width: `${dimensions.displayW}px`, 
+                height: `${dimensions.displayH}px` 
+              }}
+            >
             <g transform={`translate(${viewTransform.x}, ${viewTransform.y}) scale(${viewTransform.scale})`}>
               {rooms.map((room) => {
                 const isSelected = selectedRoomId === room.id;
@@ -349,6 +418,7 @@ const EditorView = ({ theme = 'default', blueprintImage, initialRooms = [], onCo
               })}
             </g>
           </svg>
+          )}
         </div>
       </div>
     </div>

@@ -5,8 +5,14 @@ const SAMPLE_BLUEPRINTS = [
   {
     id: 1,
     name: "Community Center",
-    thumbnail: "/community-center-thumbnail.png", 
+    thumbnail: "/community-center.png", 
     file: "/community-center.png"
+  },
+  {
+    id: 2,
+    name: "Detention Center",
+    thumbnail: "/detention-center.png", 
+    file: "/detention-center.png"
   }
 ];
 
@@ -125,7 +131,7 @@ const UploadView = ({
           </h3>
         </div>
         <p className={`${theme.textSecondary} mb-4 text-sm`}>
-          Click any sample below to automatically analyze it
+          Click any sample below to automatically check compliance
         </p>
 
         {/* Gallery Grid */}
@@ -151,7 +157,7 @@ const UploadView = ({
               {/* Overlay on Hover */}
               <div className="absolute inset-0 bg-blue-600 bg-opacity-0 group-hover:bg-opacity-80 transition-all flex items-center justify-center">
                 <span className="text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity text-center px-2">
-                  Analyze
+                  Check
                 </span>
               </div>
 

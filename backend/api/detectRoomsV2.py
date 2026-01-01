@@ -130,7 +130,7 @@ USER_PROMPT = (
     "Shape Types:\n"
     "- 'rect': Use 'coords' with x, y, w, h\n"
     "- 'circle': Use 'coords' with cx, cy, r\n"
-    "- 'polygon': Use 'points' array of [x, y] coordinates\n\n"
+    "- 'polygon': Use 'points' array of [x, y] coordinates.\n\n"
     "Return ONLY valid JSON, no markdown formatting, no code blocks, no explanatory text."
 )
 
