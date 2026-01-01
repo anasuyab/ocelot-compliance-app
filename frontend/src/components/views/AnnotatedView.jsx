@@ -36,20 +36,41 @@ const AnnotatedView = ({
   };
 
   const colorPalette = [
-    'rgba(100, 149, 237, 0.4)', 'rgba(255, 99, 71, 0.4)', 'rgba(147, 112, 219, 0.4)',
-    'rgba(255, 165, 0, 0.4)', 'rgba(135, 206, 250, 0.4)', 'rgba(255, 192, 203, 0.4)',
-    'rgba(240, 230, 140, 0.4)', 'rgba(211, 211, 211, 0.4)', 'rgba(144, 238, 144, 0.4)',
-    'rgba(255, 218, 185, 0.4)', 'rgba(176, 196, 222, 0.4)', 'rgba(255, 160, 122, 0.4)',
+    'rgba(100, 149, 237, 0.4)', // Cornflower Blue
+    'rgba(255, 99, 71, 0.4)',  // Tomato
+    'rgba(147, 112, 219, 0.4)', // Medium Purple
+    'rgba(255, 165, 0, 0.4)',   // Orange
+    'rgba(135, 206, 250, 0.4)', // Light Sky Blue
+    'rgba(255, 192, 203, 0.4)', // Pink
+    'rgba(240, 230, 140, 0.4)', // Khaki
+    'rgba(211, 211, 211, 0.4)', // Light Grey
+    'rgba(144, 238, 144, 0.4)', // Light Green
+    'rgba(255, 218, 185, 0.4)', // Peach
+    'rgba(176, 196, 222, 0.4)', // Light Steel Blue
+    'rgba(255, 160, 122, 0.4)', // Light Salmon
+    'rgba(32, 178, 170, 0.4)',  // Light Sea Green (New)
+    'rgba(255, 215, 0, 0.4)',   // Gold (New)
+    'rgba(221, 160, 221, 0.4)', // Plum (New)
+    'rgba(95, 158, 160, 0.4)',  // Cadet Blue (New)
+    'rgba(210, 105, 30, 0.4)',  // Chocolate (New)
+    'rgba(154, 205, 50, 0.4)',  // Yellow Green (New)
+    'rgba(186, 85, 211, 0.4)',  // Medium Orchid (New)
+    'rgba(70, 130, 180, 0.4)',  // Steel Blue (New)
   ];
 
   // --- Effects ---
   useEffect(() => {
     if (roomsData && roomsData.length > 0) {
+      // 1. Identify all unique room types (e.g., 'bedroom', 'kitchen')
       const uniqueTypes = [...new Set(roomsData.map(r => r.type?.toLowerCase()))];
       const newColorMap = {};
+
+      // 2. Assign colors
       uniqueTypes.forEach((type, index) => {
+        // This modulo logic ensures we don't repeat until we hit the 21st unique type
         newColorMap[type] = colorPalette[index % colorPalette.length];
       });
+
       setColorMap(newColorMap);
     }
   }, [roomsData]);
