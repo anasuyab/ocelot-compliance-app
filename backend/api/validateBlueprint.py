@@ -15,9 +15,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MODEL_TYPE = "gemini-2.5-flash-lite"
-USER_PROMPT = "Given this picture, check if it is a blueprint. If it is a blueprint then return true,"\
- "if it is not a blueprint return false. The result must be in json format {\"result\": True}. No othergi " \
- "information should be provided other than the json" 
+USER_PROMPT = (
+    "Analyze the provided image and determine if it is a valid architectural blueprint.\n\n"
+    "To be considered a valid blueprint (result: true), the image must satisfy ALL of the following criteria:\n"
+    "1. Is a Blueprint: The image visually depicts a floor plan or architectural drawing.\n"
+    "2. Has Scale: A visual scale bar or text indicating the scale (e.g., '1/4\" = 1\\'0\"' or a graphical ruler) is clearly present.\n"
+    "3. Has Rooms: Distinct room labels or identifiable room types (e.g., 'Kitchen', 'Bedroom', 'Lobby') are textually present.\n\n"
+    "Output Instructions:\n"
+    "- If ANY of the above criteria are missing, the 'result' must be false.\n"
+    "- If the result is true, provide the list of detected room types in the 'rooms' field.\n"
+    "- If the result is false, the 'rooms' field should be an empty list [].\n"
+    "- Strictly output ONLY valid JSON. Do not include markdown formatting (like ```json), explanations, or any other text.\n\n"
+    "Required JSON Structure:\n"
+    "{\"result\": boolean}"
+)
 
 class handler(BaseHTTPRequestHandler):
 
