@@ -8,6 +8,7 @@ export const themes = {
       headerBackground: 'bg-white',
       headerBorder: 'border-slate-200',
       headerIcon: 'text-blue-600',
+      logoSrc: null,
       headerTitle: 'text-slate-900',
       headerSubtitle: 'text-slate-600',
       
@@ -75,7 +76,8 @@ export const themes = {
       // Header - Deep Teal background with Cyan accents
       headerBackground: 'bg-[#025159]',
       headerBorder: 'border-[#025159]',
-      headerIcon: 'text-[#5CD7F2]', 
+      headerIcon: 'text-[#5CD7F2]',
+      logoSrc: '/pequot-logo.png',
       headerTitle: 'text-white',
       headerSubtitle: 'text-[#5CD7F2]',
       

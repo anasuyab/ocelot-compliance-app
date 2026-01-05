@@ -113,7 +113,18 @@ const App = () => {
       <div className={`${theme.headerBackground} border-b ${theme.headerBorder} shadow-sm`}>
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-3">
-            <FileText className={`w-8 h-8 ${theme.headerIcon}`} />
+            
+            {/* CONDITIONAL LOGO LOGIC */}
+            {theme.logoSrc ? (
+              <img 
+                src={theme.logoSrc} 
+                alt="Tribe Logo" 
+                className="w-auto h-12 object-contain" 
+              />
+            ) : (
+              <FileText className={`w-8 h-8 ${theme.headerIcon}`} />
+            )}
+
             <div>
               <h1 className={`text-2xl font-bold ${theme.headerTitle}`}>Blueprint Compliance Checker</h1>
               <p className={`text-sm ${theme.headerSubtitle}`}>105(l) Lease Facility Requirements Analysis</p>

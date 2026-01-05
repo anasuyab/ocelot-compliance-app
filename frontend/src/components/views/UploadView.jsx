@@ -59,7 +59,6 @@ const UploadView = ({
   return (
     <div className="max-w-2xl mx-auto">
       <div className={`${theme.cardBackground} rounded-xl shadow-lg p-8 border ${theme.cardBorder}`}>
-        {/* ... (Header section remains the same) ... */}
         
         <div className="text-center mb-6">
            <Upload className={`w-16 h-16 ${theme.headerIcon} mx-auto mb-4`} />
