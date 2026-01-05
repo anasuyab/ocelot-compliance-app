@@ -68,54 +68,54 @@ export const themes = {
       exportButton: 'text-blue-600 hover:text-blue-700'
     },
     
-    custom: {
-      // Background gradients - Purple theme
-      pageBackground: 'from-purple-50 to-pink-50',
+    pequot: {
+      // Backgrounds - Using the Off-White from the palette
+      pageBackground: 'bg-[#F2F2F2]',
       
-      // Header
-      headerBackground: 'bg-gradient-to-r from-purple-600 to-pink-600',
-      headerBorder: 'border-purple-300',
-      headerIcon: 'text-white',
+      // Header - Deep Teal background with Cyan accents
+      headerBackground: 'bg-[#025159]',
+      headerBorder: 'border-[#025159]',
+      headerIcon: 'text-[#5CD7F2]', 
       headerTitle: 'text-white',
-      headerSubtitle: 'text-purple-100',
+      headerSubtitle: 'text-[#5CD7F2]',
       
-      // Primary buttons
-      primaryButton: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700',
+      // Primary buttons - Deep Teal
+      primaryButton: 'bg-[#025159] hover:bg-[#013b42]',
       primaryButtonText: 'text-white',
       
       // Cards
       cardBackground: 'bg-white',
-      cardBorder: 'border-purple-200',
+      cardBorder: 'border-slate-200',
       
       // Steps
-      stepActive: 'bg-purple-600',
-      stepCompleted: 'bg-green-600',
-      stepInactive: 'bg-purple-200',
-      stepDivider: 'bg-purple-200',
+      stepActive: 'bg-[#025159]',
+      stepCompleted: 'bg-green-600', // Kept green for semantic success state
+      stepInactive: 'bg-slate-300',
+      stepDivider: 'bg-slate-300',
       
-      // Upload area
-      uploadBorder: 'border-purple-300 hover:border-purple-500 hover:bg-purple-50',
-      uploadIcon: 'text-purple-400',
+      // Upload area - Cyan hover effects
+      uploadBorder: 'border-slate-300 hover:border-[#5CD7F2] hover:bg-[#5CD7F2]/10',
+      uploadIcon: 'text-[#025159]',
       
-      // Info box
-      infoBackground: 'bg-purple-50 border-purple-200',
-      infoTitle: 'text-purple-900',
-      infoText: 'text-purple-800',
+      // Info box - Light Cyan tint
+      infoBackground: 'bg-[#5CD7F2]/10 border-[#5CD7F2]/30',
+      infoTitle: 'text-[#025159]',
+      infoText: 'text-[#025159]',
       
       // Analyzing
-      loaderIcon: 'text-purple-600',
-      progressBar: 'bg-purple-200',
-      progressFill: 'bg-gradient-to-r from-purple-600 to-pink-600',
+      loaderIcon: 'text-[#5CD7F2]',
+      progressBar: 'bg-slate-200',
+      progressFill: 'bg-[#025159]',
       
       // Report header
-      reportHeaderGradient: 'from-purple-600 to-pink-600',
-      reportHeaderButton: 'bg-white text-purple-600 hover:bg-purple-50',
+      reportHeaderGradient: 'from-[#025159] to-[#013b42]',
+      reportHeaderButton: 'bg-white text-[#025159] hover:bg-[#F2F2F2]',
       
       // Summary cards
       summaryGreen: 'bg-green-50 text-green-700 border-green-200',
       summaryRed: 'bg-red-50 text-red-700 border-red-200',
       summaryAmber: 'bg-amber-50 text-amber-700 border-amber-200',
-      summaryBlue: 'bg-purple-50 text-purple-700 border-purple-200',
+      summaryBlue: 'bg-[#5CD7F2]/10 text-[#025159] border-[#5CD7F2]/20',
       
       // Category status
       categoryCompliant: 'bg-green-100 text-green-800',
@@ -123,17 +123,17 @@ export const themes = {
       categoryWarning: 'bg-amber-100 text-amber-800',
       
       // Recommendation box
-      recommendationBackground: 'bg-purple-50 border-purple-200',
-      recommendationTitle: 'text-purple-900',
-      recommendationText: 'text-purple-800',
+      recommendationBackground: 'bg-[#F2F2F2] border-[#025159]/20',
+      recommendationTitle: 'text-[#025159]',
+      recommendationText: 'text-[#0D0D0D]',
       
       // Text colors
-      textPrimary: 'text-slate-900',
+      textPrimary: 'text-[#0D0D0D]',
       textSecondary: 'text-slate-600',
       textTertiary: 'text-slate-500',
       
       // Export button
-      exportButton: 'text-purple-600 hover:text-purple-700'
+      exportButton: 'text-[#025159] hover:text-[#013b42]'
     }
   };
   
