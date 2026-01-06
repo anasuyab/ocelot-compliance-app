@@ -138,43 +138,7 @@ USER_PROMPT = (
     "Return ONLY valid JSON, no markdown formatting, no code blocks, no explanatory text."
 )
 
-# --- PROCESSING HELPER ---
-def _process_categories(self, data):
 
-    # 1. Define Categories
-    categories = ["A", "B", "C", "D"]
-        
-    # 2. Identify unique room types present in the data
-    # We use a set to ensure we only assign a category to a 'type' once
-    unique_types = list(set(room["type"] for room in data.get("rooms", [])))
-        
-    # 3. Create a mapping of Type -> Random Category
-    # e.g. {'gym': 'A', 'office': 'C', ...}
-    type_category_map = { r_type: random.choice(categories) for r_type in unique_types }
-        
-    # 4. Initialize totals
-    category_totals = { cat: 0 for cat in categories }
-        
-    # 5. Iterate through rooms to assign categories and sum areas
-    for room in data.get("rooms", []):
-        r_type = room.get("type")
-        area = room.get("calculated_area", 0)
-            
-        # Assign the determined category to this room
-        assigned_cat = type_category_map.get(r_type)
-        room["category"] = assigned_cat
-            
-        # Add to total
-        if assigned_cat:
-            category_totals[assigned_cat] += area
-
-        # 6. Append the summary to the root of the JSON object
-        data["category_summary"] = {
-            "totals_sq_ft": category_totals,
-            "type_assignments": type_category_map # Optional: helpful for debugging
-        }
-        
-    return data
 
 class handler(BaseHTTPRequestHandler):
 
@@ -185,6 +149,44 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', '*')
         self.end_headers()
+
+    # --- PROCESSING HELPER ---
+    def _process_categories(data):
+
+        # 1. Define Categories
+        categories = ["A", "B", "C", "D"]
+            
+        # 2. Identify unique room types present in the data
+        # We use a set to ensure we only assign a category to a 'type' once
+        unique_types = list(set(room["type"] for room in data.get("rooms", [])))
+            
+        # 3. Create a mapping of Type -> Random Category
+        # e.g. {'gym': 'A', 'office': 'C', ...}
+        type_category_map = { r_type: random.choice(categories) for r_type in unique_types }
+            
+        # 4. Initialize totals
+        category_totals = { cat: 0 for cat in categories }
+            
+        # 5. Iterate through rooms to assign categories and sum areas
+        for room in data.get("rooms", []):
+            r_type = room.get("type")
+            area = room.get("calculated_area", 0)
+                
+            # Assign the determined category to this room
+            assigned_cat = type_category_map.get(r_type)
+            room["category"] = assigned_cat
+                
+            # Add to total
+            if assigned_cat:
+                category_totals[assigned_cat] += area
+
+            # 6. Append the summary to the root of the JSON object
+            data["category_summary"] = {
+                "totals_sq_ft": category_totals,
+                "type_assignments": type_category_map # Optional: helpful for debugging
+            }
+        
+        return data
 
     # --- POST REQUEST ---
     def do_POST(self):
