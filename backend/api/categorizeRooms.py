@@ -243,21 +243,99 @@ class handler(BaseHTTPRequestHandler):
     # --- HELPERS ---
     def _process_categories(self, data):
 
-        # 1. Define Categories
-        categories = ["A", "B", "C", "D"]
+        CAT_PFSA          = "PFSA Space"
+        CAT_NON_QUALIFIED = "Non Qualified Space"
+        CAT_COMMON        = "Common Space"
+        CAT_SHARED        = "Shared Space"
+
+        categories = [CAT_PFSA, CAT_NON_QUALIFIED, CAT_COMMON, CAT_SHARED]
+
+        fixed_rules = {
+            # -- Non Qualified Space (Vertical penetrations, structural, hygiene) --
+            "bathroom":     CAT_NON_QUALIFIED,
+            "restroom":     CAT_NON_QUALIFIED,
+            "toilet":       CAT_NON_QUALIFIED,
+            "wc":           CAT_NON_QUALIFIED,
+            "stairs":       CAT_NON_QUALIFIED,
+            "stairwell":    CAT_NON_QUALIFIED,
+            "elevator":     CAT_NON_QUALIFIED,
+            "lift":         CAT_NON_QUALIFIED,
+            "shaft":        CAT_NON_QUALIFIED,
+            "mechanical":   CAT_NON_QUALIFIED,
+            "electrical":   CAT_NON_QUALIFIED,
+            "utility":      CAT_NON_QUALIFIED,
+            "storage":      CAT_NON_QUALIFIED,
+            "closet":       CAT_NON_QUALIFIED,
+            "janitor":      CAT_NON_QUALIFIED,
+            "garage":       CAT_NON_QUALIFIED,
+            "parking":      CAT_NON_QUALIFIED,
+            "terrace":      CAT_NON_QUALIFIED, # Often excluded from interior rent
+            "balcony":      CAT_NON_QUALIFIED,
+
+            # -- Common Space (Circulation, entry) --
+            "corridor":     CAT_COMMON,
+            "hallway":      CAT_COMMON,
+            "hall":         CAT_COMMON,
+            "vestibule":    CAT_COMMON,
+            "lobby":        CAT_COMMON,
+            "entry":        CAT_COMMON,
+            "entrance":     CAT_COMMON,
+            "foyer":        CAT_COMMON,
+            "reception":    CAT_COMMON,
+            "waiting":      CAT_COMMON,
+            "atrium":       CAT_COMMON,
+            "courtyard":    CAT_COMMON, # Assigned here as general circulation/amenity
+
+            # -- Shared Space (Amenities available to all tenants/employees) --
+            "gym":          CAT_SHARED,
+            "fitness":      CAT_SHARED,
+            "exercise":     CAT_SHARED,
+            "cafeteria":    CAT_SHARED,
+            "kitchen":      CAT_SHARED,
+            "pantry":       CAT_SHARED,
+            "breakroom":    CAT_SHARED,
+            "lounge":       CAT_SHARED,
+            "conference":   CAT_SHARED,
+            "meeting":      CAT_SHARED,
+            "library":      CAT_SHARED,
+            "mailroom":     CAT_SHARED,
+            "copy":         CAT_SHARED,
+
+            # -- PFSA Space (Primary Functional / Work Areas) --
+            "office":       CAT_PFSA,
+            "workstation":  CAT_PFSA,
+            "cubicle":      CAT_PFSA,
+            "desk":         CAT_PFSA,
+            "open office":  CAT_PFSA,
+            "lab":          CAT_PFSA,
+            "classroom":    CAT_PFSA,
+            "workspace":    CAT_PFSA
+        }
             
-        # 2. Identify unique room types present in the data
         # We use a set to ensure we only assign a category to a 'type' once
         unique_types = list(set(room["type"] for room in data.get("rooms", [])))
             
-        # 3. Create a mapping of Type -> Random Category
+        # Create a mapping of Type -> Random Category
         # e.g. {'gym': 'A', 'office': 'C', ...}
-        type_category_map = { r_type: random.choice(categories) for r_type in unique_types }
+        type_category_map = {}
+        for r_type in unique_types:
+            # Check if we have a hardcoded rule for this type
+            if r_type in fixed_rules:
+                # Ensure the fixed category is valid, otherwise fallback to random
+                target_cat = fixed_rules[r_type]
+                if target_cat in categories:
+                    type_category_map[r_type] = target_cat
+                else:
+                     # Fallback if you typed a category name wrong in fixed_rules
+                    type_category_map[r_type] = random.choice(categories)
+            else:
+                # No rule found? Assign randomly
+                type_category_map[r_type] = random.choice(categories)
             
-        # 4. Initialize totals
+        # Initialize totals
         category_totals = { cat: 0 for cat in categories }
             
-        # 5. Iterate through rooms to assign categories and sum areas
+        # Iterate through rooms to assign categories and sum areas
         for room in data.get("rooms", []):
             r_type = room.get("type")
             area = room.get("calculated_area", 0)
