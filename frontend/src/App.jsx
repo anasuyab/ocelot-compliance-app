@@ -3,7 +3,7 @@ import { FileText } from 'lucide-react';
 
 // 1. Logic & Data Imports
 import { getThemeFromURL } from './themes/themes';
-import { useBlueprintAnalysisV2 } from './hooks/useBlueprintAnalysisV2';
+import { useBlueprintCategorization } from './hooks/useBlueprintCategorization';
 import { useBlueprintValidation } from './hooks/useBlueprintValidation';
 
 // 2. View Component Imports
@@ -29,7 +29,7 @@ const App = () => {
     error: analysisError, 
     startAnalysis, 
     resetAnalysis  
-  } = useBlueprintAnalysisV2();
+  } = useBlueprintCategorization();
 
   const {
     validationStatus,
@@ -195,8 +195,10 @@ const App = () => {
           <CategoryAnnotatedView
             theme={theme}
             blueprintImage={blueprintImage}
+            fileName={uploadedFile ? uploadedFile.name.replace(/\.[^/.]+$/, "") : "Untitled Blueprint"}
             roomsData={result.rooms || []}
             imageMetadata={result.imageMetadata || null}
+            categorySummary={result.category_summary || null}
             onNext={handleReviewComplete}
             onReset={handleReset}
           />
