@@ -9,8 +9,7 @@ import { useBlueprintValidation } from './hooks/useBlueprintValidation';
 // 2. View Component Imports
 import UploadView from './components/views/UploadView';
 import AnalysisView from './components/views/AnalysisView';
-import AnnotatedView from './components/views/AnnotatedView';
-import EditorViewV2 from './components/views/EditorViewV2';
+import CategoryAnnotatedView from './components/views/CategoryAnnotatedView';
 import ComplianceReport from './components/views/ComplianceReport';
 import StepIndicator from './components/common/StepIndicator';
 import { useReportGeneration } from './hooks/useReportGeneration';
@@ -49,7 +48,6 @@ const App = () => {
   const theme = getThemeFromURL();
   const displayError = validationError || analysisError || generationError;
 
-  // Updated Logic: We insert 'annotated' and 'review' between analyzing and report
   const getCurrentStep = () => {
     if (status === 'error') return 'upload';
     if (status === 'analyzing') return 'analyzing';
@@ -194,7 +192,7 @@ const App = () => {
 
         {/* Annotated Preview Step */}
         {currentStep === 'annotated' && result && (
-          <AnnotatedView
+          <CategoryAnnotatedView
             theme={theme}
             blueprintImage={blueprintImage}
             roomsData={result.rooms || []}

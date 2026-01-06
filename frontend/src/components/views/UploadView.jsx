@@ -22,7 +22,7 @@ const UploadView = ({
   blueprintImage, 
   onUpload, 
   onStartAnalysis, 
-  isValidating // <--- Recieve this prop
+  isValidating 
 }) => {
 
   // Handle sample blueprint selection
@@ -76,7 +76,7 @@ const UploadView = ({
               disabled={isValidating} // Disable input while validating
             />
             
-            {/* ... (File Preview Logic remains the same) ... */}
+            {/* ... (File Preview Logic) ... */}
              {uploadedFile ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-3">
