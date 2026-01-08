@@ -269,7 +269,7 @@ class handler(BaseHTTPRequestHandler):
             "janitor":      CAT_NON_QUALIFIED,
             "garage":       CAT_NON_QUALIFIED,
             "parking":      CAT_NON_QUALIFIED,
-            "terrace":      CAT_NON_QUALIFIED, # Often excluded from interior rent
+            "terrace":      CAT_NON_QUALIFIED, 
             "balcony":      CAT_NON_QUALIFIED,
 
             # -- Common Space (Circulation, entry) --

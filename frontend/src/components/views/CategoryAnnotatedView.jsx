@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 
-// --- CONSTANTS ---
+// --- 1. DEFINE CONSTANTS ---
 const CAT_PFSA = "PFSA Space";
 const CAT_NON_QUALIFIED = "Non Qualified Space";
 const CAT_COMMON = "Common Space";
@@ -18,10 +18,10 @@ const CATEGORY_COLORS = {
 
 const CategoryAnnotatedView = ({ 
   theme, 
-  blueprintImage,
-  fileName,
+  blueprintImage, 
   roomsData, 
   categorySummary, 
+  fileName,
   coordinateBaseSize = { width: 1024, height: 1024 }, 
   onNext 
 }) => {
@@ -36,11 +36,7 @@ const CategoryAnnotatedView = ({
   // --- State ---
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [selectedRoomIndex, setSelectedRoomIndex] = useState(null);
-  
-  // New State: Highlight a specific category (filter view)
   const [highlightedCategory, setHighlightedCategory] = useState(null);
-  
-  // New State: Sidebar collapsed groups
   const [collapsedCategories, setCollapsedCategories] = useState({});
 
   const sidebarRefs = useRef({}); 
@@ -48,7 +44,7 @@ const CategoryAnnotatedView = ({
   // --- Styles ---
   const textStyle = {
     fill: "black",
-    fontWeight: "700", // Bolder for visibility
+    fontWeight: "700",
     textAnchor: "middle",
     pointerEvents: "none",
     paintOrder: "stroke",
@@ -60,7 +56,6 @@ const CategoryAnnotatedView = ({
 
   // --- Group Rooms by Category ---
   const roomsByCategory = useMemo(() => {
-    // Initialize with variables
     const grouped = {
       [CAT_PFSA]: [],
       [CAT_NON_QUALIFIED]: [],
@@ -71,17 +66,9 @@ const CategoryAnnotatedView = ({
     
     if (roomsData) {
       roomsData.forEach((room, index) => {
-        // Fallback to CAT_UNKNOWN if category is missing
         const cat = room.category || CAT_UNKNOWN;
-        
-        // Safety check: if the API returns a category we don't know, treat as Unknown
-        if (!grouped[cat]) {
-             // Optional: Create the key on the fly or push to unknown
-             if (!grouped[CAT_UNKNOWN]) grouped[CAT_UNKNOWN] = [];
-             grouped[CAT_UNKNOWN].push({ ...room, originalIndex: index });
-        } else {
-             grouped[cat].push({ ...room, originalIndex: index });
-        }
+        const targetGroup = grouped[cat] ? cat : CAT_UNKNOWN;
+        grouped[targetGroup].push({ ...room, originalIndex: index });
       });
     }
     return grouped;
@@ -119,7 +106,7 @@ const CategoryAnnotatedView = ({
     return categorySummary.totals_sq_ft[cat] || 0;
   };
 
-  // --- Geometry Helpers (Unchanged logic) ---
+  // --- Geometry Helpers ---
   const getRoomGeometry = (room) => {
     const shapeType = room.shape_type || room.type;
     if ((shapeType === 'rect' || room.coords?.x !== undefined) && room.coords) {
@@ -176,40 +163,19 @@ const CategoryAnnotatedView = ({
         className={`${theme.cardBackground} ${theme.cardBorder}`}
       >
         <div className="p-4 border-b border-gray-200">
-           <h2 className={`m-0 mb-3 text-lg font-bold ${theme.textPrimary}`}>Project: {fileName}</h2>
+           <h3 className={`m-0 text-lg font-bold ${theme.textPrimary}`}>Detected Rooms</h3>
+           <p className="text-sm text-gray-500 mb-3 truncate" title={fileName}>
+             {fileName}
+           </p>
            
-           {/* Controls */}
-           <div className="flex gap-2 mb-4">
+           <div className="flex gap-2">
             <button className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded text-sm font-medium ${theme.primaryButton} ${theme.primaryButtonText}`} onClick={handleZoomIn}><ZoomIn size={14} /> In</button>
             <button className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded text-sm font-medium ${theme.primaryButton} ${theme.primaryButtonText}`} onClick={handleZoomOut}><ZoomOut size={14} /> Out</button>
             <button className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded text-sm font-medium ${theme.primaryButton} ${theme.primaryButtonText}`} onClick={handleReset}><RotateCcw size={14} /> Reset</button>
           </div>
-
-          {/* Interactive Legend in Sidebar */}
-          <div className="grid grid-cols-2 gap-2">
-            {Object.keys(CATEGORY_COLORS).map(cat => (
-              <div 
-                key={cat} 
-                onClick={() => toggleCategoryHighlight(cat)}
-                className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors border ${
-                  highlightedCategory === cat ? 'bg-gray-100 border-gray-400' : 'bg-white border-transparent hover:bg-gray-50'
-                }`}
-              >
-                <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0" 
-                  style={{ backgroundColor: CATEGORY_COLORS[cat].replace('0.6', '1') }}
-                />
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-bold text-gray-700 truncate">{cat}</span>
-                  <span className="text-[10px] text-gray-500">{getCategoryTotal(cat).toLocaleString()} sq ft</span>
-                </div>
-                {highlightedCategory === cat && <Eye size={12} className="ml-auto text-gray-500" />}
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* Room List (Grouped) */}
+        {/* Room List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {Object.entries(roomsByCategory).map(([category, rooms]) => {
              if (rooms.length === 0) return null;
@@ -217,7 +183,6 @@ const CategoryAnnotatedView = ({
 
              return (
                <div key={category} className="border rounded-lg overflow-hidden bg-white shadow-sm">
-                 {/* Category Header */}
                  <div 
                     onClick={() => toggleCategoryCollapse(category)}
                     className="flex items-center justify-between p-3 bg-gray-50 cursor-pointer border-b border-gray-100 hover:bg-gray-100 transition-colors"
@@ -229,7 +194,6 @@ const CategoryAnnotatedView = ({
                     </div>
                  </div>
 
-                 {/* Room Items */}
                  {!isCollapsed && (
                    <div className="divide-y divide-gray-100">
                      {rooms.map((room) => {
@@ -255,7 +219,6 @@ const CategoryAnnotatedView = ({
                               </span>
                             </div>
                             
-                            {/* Wall Measurements in Sidebar */}
                             {room.walls && (
                               <div className="grid grid-cols-3 gap-1 mt-2">
                                 {room.walls.map((wall, wIdx) => (
@@ -286,12 +249,46 @@ const CategoryAnnotatedView = ({
       {/* --- CANVAS --- */}
       <div className="flex-1 relative overflow-hidden flex justify-center items-center bg-gray-900">
         
-        {/* Floating Title Overlay */}
-        {highlightedCategory && (
-           <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-30 bg-black/70 text-white px-4 py-1 rounded-full text-sm backdrop-blur-md pointer-events-none">
-             Highlighting: <span className="font-bold">{highlightedCategory}</span>
+        {/* --- PROMINENT TOP LEGEND WITH FILENAME --- */}
+        <div className="absolute top-6 z-20 flex justify-center w-full px-8 pointer-events-none">
+           <div className="flex flex-col items-center">
+             
+             {/* Filename Badge */}
+             <div className="mb-2 px-4 py-1.5 bg-gray-900/80 backdrop-blur-sm rounded-full text-white text-lg font-medium shadow-lg pointer-events-auto border border-white/10">
+               {fileName}
+             </div>
+
+             {/* Legend Pill */}
+             <div className="bg-white/95 backdrop-blur-md px-6 py-3 rounded-full shadow-xl border border-gray-200 flex gap-6 pointer-events-auto">
+               {Object.keys(CATEGORY_COLORS).map(cat => {
+                 if (getCategoryTotal(cat) === 0) return null; 
+                 const isActive = highlightedCategory === cat;
+                 const isDimmed = highlightedCategory && !isActive;
+
+                 return (
+                   <div 
+                     key={cat} 
+                     onClick={() => toggleCategoryHighlight(cat)}
+                     className={`flex flex-col items-center cursor-pointer transition-all duration-200 px-2 py-1 rounded-lg ${
+                       isActive ? 'bg-gray-100 scale-105 ring-2 ring-blue-500/20' : ''
+                     } ${isDimmed ? 'opacity-40 hover:opacity-100' : 'hover:bg-gray-50'}`}
+                   >
+                      <div className="flex items-center gap-2 mb-1">
+                         <div 
+                           className="w-4 h-4 rounded-full shadow-sm" 
+                           style={{ backgroundColor: CATEGORY_COLORS[cat].replace('0.6', '1') }}
+                         />
+                         <span className="font-bold text-gray-800 text-sm">{cat}</span>
+                      </div>
+                      <span className="text-xs text-gray-600 font-mono font-medium">
+                        {getCategoryTotal(cat).toLocaleString()} ft²
+                      </span>
+                   </div>
+                 );
+               })}
+             </div>
            </div>
-        )}
+        </div>
 
         <div style={{ position: 'relative', display: 'inline-flex', boxShadow: '0 0 40px rgba(0,0,0,0.5)' }}>
           <img 
@@ -319,8 +316,6 @@ const CategoryAnnotatedView = ({
                   const roomColor = getCategoryColor(room.category);
                   const strokeColor = isSelected ? '#fff' : (isHighlighted ? '#333' : '#999');
                   const strokeWidth = isSelected ? referenceWidth * 0.005 : referenceWidth * 0.001;
-                  
-                  // Dim opacity if we are highlighting a specific category and this room doesn't match
                   const fillOpacity = isHighlighted ? (isSelected ? 0.8 : 0.5) : 0.1;
 
                   const shapeProps = {
@@ -348,27 +343,24 @@ const CategoryAnnotatedView = ({
                   );
                 })}
 
-                {/* 2. DRAW TEXT (Only if Highlighted or No Filter) */}
+                {/* 2. DRAW TEXT */}
                 {roomsData.map((room, idx) => {
                   const geometry = getRoomGeometry(room);
                   if (!geometry) return null;
 
                   const isHighlighted = !highlightedCategory || room.category === highlightedCategory;
-                  if (!isHighlighted) return null; // Hide text for non-highlighted rooms to reduce clutter
+                  if (!isHighlighted) return null;
 
                   return (
                     <g key={`text-${idx}`} style={{ pointerEvents: 'none' }}>
-                      {/* Name Label */}
                       <text x={geometry.centerX} y={geometry.centerY - (fontSizeRoom * 0.8)} fontSize={fontSizeRoom} style={textStyle}>
                         {room.name}
                       </text>
                       
-                      {/* Area Label */}
                       <text x={geometry.centerX} y={geometry.centerY + (fontSizeRoom * 0.5)} fontSize={fontSizeRoom * 0.8} style={{...textStyle, fill: '#333', strokeWidth: referenceWidth * 0.001}}>
                         {room.calculated_area?.toLocaleString()} ft²
                       </text>
 
-                      {/* Wall Labels */}
                       {room.walls && room.walls.map((wall, wIdx) => {
                         const labelPos = getWallLabelPosition(room, wall, geometry);
                         if (!labelPos) return null;

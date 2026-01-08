@@ -165,7 +165,7 @@ const App = () => {
           />
           <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
           <StepIndicator 
-            number={5} label="Report" 
+            number={4} label="Report" 
             active={currentStep === 'report'} 
             theme={theme} 
           />
