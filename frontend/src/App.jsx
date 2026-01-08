@@ -8,6 +8,7 @@ import { useBlueprintValidation } from './hooks/useBlueprintValidation';
 
 // 2. View Component Imports
 import UploadView from './components/views/UploadView';
+import AttestationView from './components/views/AttestationView';
 import AnalysisView from './components/views/AnalysisView';
 import CategoryAnnotatedView from './components/views/CategoryAnnotatedView';
 import ComplianceReport from './components/views/ComplianceReport';
@@ -18,14 +19,14 @@ const App = () => {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [blueprintImage, setBlueprintImage] = useState(null);
   
-  // New state to track if we have finished the interactive review
-  const [hasReviewed, setHasReviewed] = useState(false);
+  // --- STATE FOR FLOW CONTROL ---
+  const [isAttesting, setIsAttesting] = useState(false);
   const [hasViewedAnnotations, setHasViewedAnnotations] = useState(false);
 
   const { 
-    status,         
-    progress,       
-    result,        
+    status,          
+    progress,        
+    result,         
     error: analysisError, 
     startAnalysis, 
     resetAnalysis  
@@ -48,27 +49,33 @@ const App = () => {
   const theme = getThemeFromURL();
   const displayError = validationError || analysisError || generationError;
 
+  // --- LOGIC: DETERMINE CURRENT STEP ---
   const getCurrentStep = () => {
-    if (status === 'error') return 'upload';
+    if (!uploadedFile) return 'upload';
+    
+    // If file exists and we are attesting (or haven't started analysis yet), go to attestation
+    if (uploadedFile && isAttesting && status === 'idle') return 'attestation';
+    
+    // If file exists but we aren't attesting yet, stay on upload (this happens for manual uploads before clicking continue)
+    if (uploadedFile && !isAttesting && status === 'idle') return 'upload';
+
     if (status === 'analyzing') return 'analyzing';
-    // When analysis is complete...
-    if (status === 'complete') {
-      // First show annotated view
-      if (!hasViewedAnnotations) return 'annotated'; 
-      // Finally show report
-      return 'report';
-    }
+    if (status === 'complete' && !hasViewedAnnotations) return 'annotated';
+    if (status === 'complete' && hasViewedAnnotations) return 'report';
     
     return 'upload';
   };
 
   const currentStep = getCurrentStep();
 
-  // Handlers
+  // --- HANDLERS ---
+
+  // 1. Manual File Upload
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       setUploadedFile(file);
+      setIsAttesting(false); // Do not auto-advance for manual uploads
       resetValidation(); 
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -76,6 +83,24 @@ const App = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // 2. Sample Selection (Auto-advance)
+  const handleSampleSelection = (file, imageUrl) => {
+    setUploadedFile(file);
+    setBlueprintImage(imageUrl);
+    setIsAttesting(true); // <--- Key change: Auto-advance immediately
+    resetValidation();
+  };
+
+  const handleContinueToAttestation = () => {
+    if (uploadedFile) {
+      setIsAttesting(true);
+    }
+  };
+
+  const handleBackToUpload = () => {
+    setIsAttesting(false);
   };
 
   const handleStartAnalysis = async () => {
@@ -87,18 +112,15 @@ const App = () => {
     }
   };
 
-  // Called when user clicks "Generate Report" in the EditorView
   const handleReviewComplete = (editedRooms) => {
-    // Trigger report generation and switch to report view
-    setHasViewedAnnotations(true)
+    setHasViewedAnnotations(true);
     generateReport(uploadedFile, editedRooms);
-    setHasReviewed(true);
   };
 
   const handleReset = () => {
     setUploadedFile(null);
     setBlueprintImage(null);
-    setHasReviewed(false);
+    setIsAttesting(false);
     setHasViewedAnnotations(false);
     resetValidation();
     resetAnalysis();
@@ -111,18 +133,11 @@ const App = () => {
       <div className={`${theme.headerBackground} border-b ${theme.headerBorder} shadow-sm`}>
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-3">
-            
-            {/* CONDITIONAL LOGO LOGIC */}
             {theme.logoSrc ? (
-              <img 
-                src={theme.logoSrc} 
-                alt="Tribe Logo" 
-                className="w-auto h-12 object-contain" 
-              />
+              <img src={theme.logoSrc} alt="Logo" className="w-auto h-12 object-contain" />
             ) : (
               <FileText className={`w-8 h-8 ${theme.headerIcon}`} />
             )}
-
             <div>
               <h1 className={`text-2xl font-bold ${theme.headerTitle}`}>Blueprint Compliance Checker</h1>
               <p className={`text-sm ${theme.headerSubtitle}`}>105(l) Lease Facility Requirements Analysis</p>
@@ -141,31 +156,42 @@ const App = () => {
           </div>
         )}
 
-        {/* --- Progress Steps (Added Annotated and Review Steps) --- */}
-        <div className="mb-8 flex items-center justify-center gap-4">
+        {/* --- Progress Steps --- */}
+        <div className="mb-8 flex items-center justify-center gap-2 md:gap-4 overflow-x-auto">
           <StepIndicator 
             number={1} label="Upload" 
             active={currentStep === 'upload'} 
             completed={currentStep !== 'upload'} 
             theme={theme} 
           />
-          <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
+          <div className={`w-6 md:w-10 h-0.5 ${theme.stepDivider}`}></div>
+          
           <StepIndicator 
-            number={2} label="Analysis" 
+            number={2} label="Attestation" 
+            active={currentStep === 'attestation'} 
+            completed={currentStep !== 'upload' && currentStep !== 'attestation'} 
+            theme={theme} 
+          />
+          <div className={`w-6 md:w-10 h-0.5 ${theme.stepDivider}`}></div>
+          
+          <StepIndicator 
+            number={3} label="Analysis" 
             active={currentStep === 'analyzing'} 
-            completed={currentStep === 'annotated' || currentStep === 'review' || currentStep === 'report'} 
+            completed={currentStep === 'annotated' || currentStep === 'report'} 
             theme={theme} 
           />
-          <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
+          <div className={`w-6 md:w-10 h-0.5 ${theme.stepDivider}`}></div>
+          
           <StepIndicator 
-            number={3} label="Review" 
+            number={4} label="Review" 
             active={currentStep === 'annotated'} 
-            completed={currentStep === 'review' || currentStep === 'report'} 
+            completed={currentStep === 'report'} 
             theme={theme} 
           />
-          <div className={`w-10 h-0.5 ${theme.stepDivider}`}></div>
+          <div className={`w-6 md:w-10 h-0.5 ${theme.stepDivider}`}></div>
+          
           <StepIndicator 
-            number={4} label="Report" 
+            number={5} label="Report" 
             active={currentStep === 'report'} 
             theme={theme} 
           />
@@ -178,19 +204,26 @@ const App = () => {
             uploadedFile={uploadedFile}
             blueprintImage={blueprintImage}
             onUpload={handleFileUpload}
+            onContinue={handleContinueToAttestation}
+            onSelectSample={handleSampleSelection} // <--- Pass new handler
+          />
+        )}
+
+        {currentStep === 'attestation' && (
+          <AttestationView
+            theme={theme}
+            fileName={uploadedFile ? uploadedFile.name : "Unknown File"}
+            blueprintImage={blueprintImage}
+            onBack={handleBackToUpload}
             onStartAnalysis={handleStartAnalysis}
             isValidating={validationStatus === 'validating'}
           />
         )}
 
         {currentStep === 'analyzing' && (
-          <AnalysisView 
-            theme={theme}
-            progress={progress}
-          />
+          <AnalysisView theme={theme} progress={progress} />
         )}
 
-        {/* Annotated Preview Step */}
         {currentStep === 'annotated' && result && (
           <CategoryAnnotatedView
             theme={theme}
@@ -204,7 +237,6 @@ const App = () => {
           />
         )}
 
-        {/* 1. Show Loading State while generating */}
         {currentStep === 'report' && generationStatus === 'generating' && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4 mx-auto"></div>
@@ -213,21 +245,16 @@ const App = () => {
           </div>
         )}
 
-        {/* 2. Show Error if generation failed */}
         {currentStep === 'report' && generationStatus === 'error' && (
           <div className="max-w-2xl mx-auto mt-8 p-6 bg-red-50 border border-red-200 rounded-lg text-center">
             <h3 className="text-lg font-bold text-red-700 mb-2">Report Generation Failed</h3>
             <p className="text-red-600 mb-4">We encountered an error compiling the final report.</p>
-            <button 
-              onClick={handleReset}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-            >
+            <button onClick={handleReset} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
               Start Over
             </button>
           </div>
         )}
 
-        {/* 3. Show Report ONLY when data exists */}
         {currentStep === 'report' && generationStatus === 'complete' && report && (
           <ComplianceReport 
             theme={theme}
@@ -235,17 +262,6 @@ const App = () => {
             report={report} 
             onReset={handleReset}
           />
-        )}
-
-        {/* 4. DEBUGGING CATCH-ALL: Logic Gap Detector */}
-        {currentStep === 'report' && generationStatus === 'complete' && !report && (
-           <div className="p-6 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center">
-             <h3 className="font-bold">Debug Info</h3>
-             <p>Status is 'complete', but Report Data is missing.</p>
-             <button onClick={() => console.log({ report, generationStatus })} className="mt-2 underline">
-               Log State to Console
-             </button>
-           </div>
         )}
       </div>
     </div>

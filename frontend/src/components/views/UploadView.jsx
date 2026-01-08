@@ -1,18 +1,18 @@
 import React from 'react';
-import { Upload, FileText, Loader2, Image } from 'lucide-react'; // Added Loader2
+import { Upload, FileText, Image, FolderOpen, ArrowRight } from 'lucide-react'; 
 
 const SAMPLE_BLUEPRINTS = [
   {
     id: 1,
     name: "Community Center",
-    thumbnail: "/community-center.png", 
-    file: "/community-center.png"
+    file: "/community-center.png",
+    thumbnail: "/community-center.png"
   },
   {
     id: 2,
     name: "Detention Center",
-    thumbnail: "/detention-center.png", 
-    file: "/detention-center.png"
+    file: "/detention-center.png",
+    thumbnail: "/detention-center.png"
   }
 ];
 
@@ -21,35 +21,24 @@ const UploadView = ({
   uploadedFile, 
   blueprintImage, 
   onUpload, 
-  onStartAnalysis, 
-  isValidating 
+  onContinue,
+  onSelectSample 
 }) => {
 
-  // Handle sample blueprint selection
   const handleSampleSelect = async (sample) => {
     try {
-      // Fetch the file from the server
+      // 1. Fetch file data
       const response = await fetch(sample.file);
       const blob = await response.blob();
-      console.log(response)
       
-      // Create a File object from the blob
+      // 2. Create File object
       const file = new File([blob], sample.name + '.png', { type: 'image/png' });
       
-      // Create a synthetic event object to pass to onUpload
-      const syntheticEvent = {
-        target: {
-          files: [file]
-        }
-      };
-      
-      // Trigger the upload handler
-      onUpload(syntheticEvent);
-      
-      // Auto-start analysis after a brief delay to let state update
-      setTimeout(() => {
-        onStartAnalysis();
-      }, 100);
+      // 3. Directly call the unified handler in App.js
+      // We pass the file AND the image URL (sample.file acts as the URL here)
+      if (onSelectSample) {
+        onSelectSample(file, sample.file);
+      }
       
     } catch (error) {
       console.error('Error loading sample blueprint:', error);
@@ -57,36 +46,79 @@ const UploadView = ({
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-6">
+      
+      {/* --- SECTION 1: SAMPLES --- */}
+      <div className={`${theme.cardBackground} ${theme.cardBorder} border rounded-xl p-6 shadow-md`}>
+        <div className="flex items-center gap-2 mb-4">
+          <FolderOpen className={`w-6 h-6 ${theme.iconPrimary}`} />
+          <h3 className={`text-xl font-bold ${theme.textPrimary}`}>
+            Open an existing project
+          </h3>
+        </div>
+        <p className={`${theme.textSecondary} mb-4 text-sm`}>
+          Select a pre-loaded project to review compliance
+        </p>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {SAMPLE_BLUEPRINTS.map((sample) => (
+            <button
+              key={sample.id}
+              onClick={() => handleSampleSelect(sample)}
+              className={`group relative overflow-hidden rounded-lg border-2 ${theme.cardBorder} hover:border-blue-500 transition-all cursor-pointer`}
+            >
+              <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                <img 
+                  src={sample.thumbnail} 
+                  alt={sample.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="absolute inset-0 bg-blue-600 bg-opacity-0 group-hover:bg-opacity-80 transition-all flex items-center justify-center">
+                <span className="text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity text-center px-2">
+                  Open
+                </span>
+              </div>
+              <div className={`p-2 ${theme.cardBackground} border-t ${theme.cardBorder}`}>
+                <p className={`text-xs font-medium ${theme.textPrimary} truncate`}>
+                  {sample.name}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* --- SECTION 2: UPLOAD --- */}
       <div className={`${theme.cardBackground} rounded-xl shadow-lg p-8 border ${theme.cardBorder}`}>
-        
         <div className="text-center mb-6">
-           <Upload className={`w-16 h-16 ${theme.headerIcon} mx-auto mb-4`} />
-           <h2 className={`text-2xl font-bold ${theme.textPrimary} mb-2`}>Upload Blueprint</h2>
-           <p className={theme.textSecondary}>Upload a blueprint or floor plan to check compliance</p>
+           <div className="flex items-center justify-center gap-2 mb-2">
+             <Upload className={`w-6 h-6 ${theme.headerIcon}`} />
+             <h2 className={`text-xl font-bold ${theme.textPrimary}`}>Start a new project</h2>
+           </div>
+           <p className={theme.textSecondary}>Upload a blueprint or floor plan</p>
         </div>
 
         <label className="block">
-          <div className={`border-2 border-dashed ${theme.uploadBorder} rounded-lg p-12 text-center transition-colors cursor-pointer`}>
+          <div className={`border-2 border-dashed ${theme.uploadBorder} rounded-lg p-12 text-center transition-colors cursor-pointer hover:bg-gray-50/50`}>
             <input 
               type="file" 
               className="hidden" 
               accept=".pdf,.png,.jpg,.jpeg"
               onChange={onUpload}
-              disabled={isValidating} // Disable input while validating
             />
             
-            {/* ... (File Preview Logic) ... */}
              {uploadedFile ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-3">
                   <FileText className="w-8 h-8 text-green-600" />
                     <div className="text-left">
                       <p className="font-semibold text-slate-900">{uploadedFile.name}</p>
+                      <p className="text-xs text-slate-500">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                   </div>
                   {blueprintImage && (
-                    <img src={blueprintImage} alt="Blueprint preview" className="max-h-48 mx-auto rounded border border-slate-200" />
+                    <img src={blueprintImage} alt="Preview" className="max-h-48 mx-auto rounded border border-slate-200 shadow-sm" />
                   )}
                 </div>
               ) : (
@@ -99,79 +131,19 @@ const UploadView = ({
           </div>
         </label>
 
+        {/* Continue Button */}
         {uploadedFile && (
           <button 
-            onClick={onStartAnalysis}
-            disabled={isValidating}
-            className={`w-full mt-6 flex items-center justify-center gap-2 text-white font-semibold py-3 rounded-lg transition-colors ${
-              isValidating 
-                ? 'bg-blue-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
+            onClick={onContinue}
+            className={`w-full mt-6 flex items-center justify-center gap-2 text-white font-semibold py-3 rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 shadow-md`}
           >
-            {isValidating ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Validating Blueprint...
-              </>
-            ) : (
-              "Analyze Blueprint"
-            )}
+            Continue to Attestation
+            <ArrowRight size={18} />
           </button>
         )}
       </div>
 
-      {/* Sample Blueprints Gallery */}
-      <div className={`${theme.cardBackground} ${theme.cardBorder} border rounded-lg p-6 shadow-md`}>
-        <div className="flex items-center gap-2 mb-4">
-          <Image className={`w-5 h-5 ${theme.iconPrimary}`} />
-          <h3 className={`text-lg font-bold ${theme.textPrimary}`}>
-            Try a Sample Blueprint
-          </h3>
-        </div>
-        <p className={`${theme.textSecondary} mb-4 text-sm`}>
-          Click any sample below to automatically check compliance
-        </p>
-
-        {/* Gallery Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {SAMPLE_BLUEPRINTS.map((sample) => (
-            <button
-              key={sample.id}
-              onClick={() => handleSampleSelect(sample)}
-              disabled={isValidating}
-              className={`group relative overflow-hidden rounded-lg border-2 ${theme.cardBorder} hover:border-blue-500 transition-all ${
-                isValidating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-              }`}
-            >
-              {/* Thumbnail */}
-              <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                <img 
-                  src={sample.thumbnail} 
-                  alt={sample.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              
-              {/* Overlay on Hover */}
-              <div className="absolute inset-0 bg-blue-600 bg-opacity-0 group-hover:bg-opacity-80 transition-all flex items-center justify-center">
-                <span className="text-white font-semibold opacity-0 group-hover:opacity-100 transition-opacity text-center px-2">
-                  Check
-                </span>
-              </div>
-
-              {/* Label */}
-              <div className={`p-2 ${theme.cardBackground} border-t ${theme.cardBorder}`}>
-                <p className={`text-xs font-medium ${theme.textPrimary} truncate`}>
-                  {sample.name}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Instructions */}
+      {/* --- SECTION 3: INSTRUCTIONS --- */}
       <div className={`${theme.cardBackground} ${theme.cardBorder} border rounded-lg p-6`}>
         <h3 className={`font-semibold mb-3 ${theme.textPrimary}`}>
           Supported File Types
@@ -185,15 +157,9 @@ const UploadView = ({
             <span className="text-green-500 mt-0.5">✓</span>
             <span>Image files (.jpg, .jpeg, .png)</span>
           </li>
-          <li className="flex items-start gap-2">
-            <span className="text-green-500 mt-0.5">✓</span>
-            <span>Maximum file size: 10MB</span>
-          </li>
         </ul>
       </div>
     </div>
-    
-
   );
 };
 
