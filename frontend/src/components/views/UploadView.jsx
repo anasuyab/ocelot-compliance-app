@@ -10,9 +10,9 @@ const SAMPLE_BLUEPRINTS = [
   },
   {
     id: 2,
-    name: "Detention Center",
-    file: "/detention-center.png",
-    thumbnail: "/detention-center.png"
+    name: "Juvenile Center",
+    file: "/juvenile-center.png",
+    thumbnail: "/juvenile-center.png"
   }
 ];
 
@@ -57,7 +57,7 @@ const UploadView = ({
           </h3>
         </div>
         <p className={`${theme.textSecondary} mb-4 text-sm`}>
-          Select a pre-loaded project to review compliance
+          Select an existing project to continue reviewing compliance
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

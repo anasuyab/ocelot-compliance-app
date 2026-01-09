@@ -4,12 +4,17 @@ import { ShieldCheck, ArrowLeft, Loader2, FileText } from 'lucide-react';
 const AttestationView = ({ 
   theme, 
   fileName,
-  blueprintImage, // <--- New Prop
+  blueprintImage,
   onBack, 
   onStartAnalysis, 
   isValidating 
 }) => {
-  const [isChecked, setIsChecked] = useState(false);
+  // State for the two new separate checkboxes
+  const [isTitleCertified, setIsTitleCertified] = useState(false);
+  const [isOperationCertified, setIsOperationCertified] = useState(false);
+
+  // Both must be checked to proceed
+  const canProceed = isTitleCertified && isOperationCertified;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -24,9 +29,9 @@ const AttestationView = ({
           <p className={theme.textSecondary}>Please confirm document completeness before analysis.</p>
         </div>
 
-        {/* Document Card & Checkbox */}
+        {/* Document Card */}
         <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-200">
-           
+            
            {/* FILE INFO + THUMBNAIL */}
            <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200">
              {/* Thumbnail Container */}
@@ -52,23 +57,51 @@ const AttestationView = ({
              </div>
            </div>
            
-           {/* Checkbox */}
-           <label className="flex items-start gap-4 cursor-pointer group p-3 rounded-lg hover:bg-white border border-transparent hover:border-gray-200 transition-all">
+           {/* --- Checkbox 1: Title Interest --- */}
+           <label className="flex items-start gap-4 cursor-pointer group p-3 rounded-lg hover:bg-white border border-transparent hover:border-gray-200 transition-all mb-2">
              <div className="relative flex items-center mt-1">
                <input 
                  type="checkbox" 
                  className="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-gray-300 shadow-sm checked:border-blue-600 checked:bg-blue-600 transition-all"
-                 checked={isChecked}
-                 onChange={(e) => setIsChecked(e.target.checked)}
+                 checked={isTitleCertified}
+                 onChange={(e) => setIsTitleCertified(e.target.checked)}
                />
                <svg className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100" width="12" height="12" viewBox="0 0 12 12" fill="none">
                  <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                </svg>
              </div>
              <div className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors leading-relaxed">
-                I attest that I am authorized to submit a lease proposal to the U.S. Department of the Interior for the following facility(ies) pursuant to Public Law 93-638.
+                <span className="font-medium">I hereby certify that the tribe applying:</span>
+                <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-500">
+                    <li>Holds the title to the facility; or</li>
+                    <li>Holds a leasehold interest in the facility; or</li>
+                    <li>Holds a trust interest in the facility.</li>
+                </ul>
              </div>
            </label>
+
+           {/* --- Checkbox 2: Operation --- */}
+           <label className="flex items-start gap-4 cursor-pointer group p-3 rounded-lg hover:bg-white border border-transparent hover:border-gray-200 transition-all">
+             <div className="relative flex items-center mt-1">
+               <input 
+                 type="checkbox" 
+                 className="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-gray-300 shadow-sm checked:border-blue-600 checked:bg-blue-600 transition-all"
+                 checked={isOperationCertified}
+                 onChange={(e) => setIsOperationCertified(e.target.checked)}
+               />
+               <svg className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                 <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+               </svg>
+             </div>
+             <div className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors leading-relaxed">
+                <span className="font-medium">I hereby certify that the tribe applying is operating the following within the facility:</span>
+                <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-500">
+                    <li>A Federal Program, Function, Service, or Activity as outlined in the Indian Self-Determination and Education Assistance Act (ISDEAA); or</li>
+                    <li>An approved ISDEAA Self-Determination Contract, Self Governance Compact, or a Public Law 100-297 grant (Tribally Controlled School).</li>
+                </ul>
+             </div>
+           </label>
+
         </div>
 
         {/* Actions */}
@@ -84,9 +117,9 @@ const AttestationView = ({
           
           <button 
             onClick={onStartAnalysis}
-            disabled={!isChecked || isValidating}
+            disabled={!canProceed || isValidating}
             className={`flex-[2] py-3 px-4 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2 ${
-              !isChecked || isValidating 
+              !canProceed || isValidating 
                 ? 'bg-gray-300 cursor-not-allowed' 
                 : 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg hover:-translate-y-0.5'
             }`}
