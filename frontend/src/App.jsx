@@ -259,7 +259,8 @@ const App = () => {
           <ComplianceReport 
             theme={theme}
             blueprintImage={blueprintImage} 
-            report={report} 
+            report={report}
+            fileName={uploadedFile ? uploadedFile.name.replace(/\.[^/.]+$/, "") : "Project Report"}
             onReset={handleReset}
           />
         )}
